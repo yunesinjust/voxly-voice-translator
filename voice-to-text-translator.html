@@ -1,864 +1,847 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Speak, translate, listen — a futuristic voice-to-text translator for the next generation." />
-  <title>VOXLY — Voice Translator</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Michroma&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg-deep: #030712;
-      --bg-mid: #0a1628;
-      --blue-glow: #1e6fff;
-      --blue-bright: #4da3ff;
-      --blue-soft: #0ea5e9;
-      --silver: #c8d4e0;
-      --silver-bright: #eef2f7;
-      --silver-dim: #6b7d94;
-      --chrome: linear-gradient(135deg, #8a9bb0 0%, #eef2f7 35%, #5a6d82 70%, #c8d4e0 100%);
-      --glass: rgba(10, 22, 40, 0.65);
-      --glass-border: rgba(200, 212, 224, 0.12);
-      --text: #e8edf4;
-      --text-dim: #8a9bb0;
-      --radius: 16px;
-      --font-display: 'Michroma', sans-serif;
-      --font-body: 'Outfit', sans-serif;
-    }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      font-family: var(--font-body);
-      background: var(--bg-deep);
-      color: var(--text);
-      min-height: 100dvh;
-      overflow-x: hidden;
-      line-height: 1.6;
-    }
-
-    /* ── Ambient background ── */
-    .ambient {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      overflow: hidden;
-    }
-
-    .ambient__grid {
-      position: absolute;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(30, 111, 255, 0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(30, 111, 255, 0.04) 1px, transparent 1px);
-      background-size: 60px 60px;
-      mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 20%, transparent 75%);
-    }
-
-    .ambient__orb {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(100px);
-      opacity: 0.35;
-      animation: drift 18s ease-in-out infinite alternate;
-    }
-
-    .ambient__orb--1 {
-      width: 500px; height: 500px;
-      background: radial-gradient(circle, #1e6fff 0%, transparent 70%);
-      top: -10%; left: -5%;
-    }
-
-    .ambient__orb--2 {
-      width: 400px; height: 400px;
-      background: radial-gradient(circle, #0ea5e9 0%, transparent 70%);
-      bottom: -5%; right: -5%;
-      animation-delay: -6s;
-    }
-
-    .ambient__orb--3 {
-      width: 300px; height: 300px;
-      background: radial-gradient(circle, rgba(200, 212, 224, 0.3) 0%, transparent 70%);
-      top: 40%; left: 50%;
-      transform: translateX(-50%);
-      animation-delay: -12s;
-    }
-
-    @keyframes drift {
-      to { transform: translate(30px, 20px) scale(1.08); }
-    }
-
-    /* ── Layout ── */
-    .page {
-      position: relative;
-      z-index: 1;
-      max-width: 920px;
-      margin: 0 auto;
-      padding: 2rem 1.25rem 4rem;
-    }
-
-    /* ── Hero entry ── */
-    .hero {
-      text-align: center;
-      padding: 3rem 0 2.5rem;
-      animation: fadeUp 0.9s ease both;
-    }
-
-    .hero__badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.35rem 1rem;
-      border-radius: 999px;
-      border: 1px solid var(--glass-border);
-      background: rgba(30, 111, 255, 0.08);
-      font-size: 0.7rem;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--blue-bright);
-      margin-bottom: 1.5rem;
-    }
-
-    .hero__badge-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--blue-glow);
-      box-shadow: 0 0 8px var(--blue-glow);
-      animation: pulse-dot 2s ease infinite;
-    }
-
-    @keyframes pulse-dot {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-
-    .hero__logo {
-      font-family: var(--font-display);
-      font-size: clamp(2.2rem, 6vw, 3.5rem);
-      letter-spacing: 0.08em;
-      background: var(--chrome);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 0.75rem;
-    }
-
-    .hero__tagline {
-      font-size: clamp(1rem, 2.5vw, 1.2rem);
-      font-weight: 300;
-      color: var(--text-dim);
-      max-width: 420px;
-      margin: 0 auto 0.5rem;
-    }
-
-    .hero__sub {
-      font-size: 0.85rem;
-      color: var(--silver-dim);
-      letter-spacing: 0.05em;
-    }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(24px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* ── Glass card ── */
-    .card {
-      background: var(--glass);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius);
-      padding: 1.5rem;
-      animation: fadeUp 0.9s ease both;
-    }
-
-    .card + .card { margin-top: 1rem; }
-
-    .card:nth-child(2) { animation-delay: 0.1s; }
-    .card:nth-child(3) { animation-delay: 0.2s; }
-    .card:nth-child(4) { animation-delay: 0.3s; }
-
-    .card__label {
-      font-family: var(--font-display);
-      font-size: 0.65rem;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--silver-dim);
-      margin-bottom: 1rem;
-    }
-
-    /* ── Language row ── */
-    .lang-row {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-    }
-
-    .lang-select {
-      flex: 1;
-      min-width: 140px;
-      appearance: none;
-      background: rgba(3, 7, 18, 0.6);
-      border: 1px solid var(--glass-border);
-      border-radius: 10px;
-      color: var(--text);
-      font-family: var(--font-body);
-      font-size: 0.9rem;
-      padding: 0.65rem 2rem 0.65rem 0.85rem;
-      cursor: pointer;
-      transition: border-color 0.2s, box-shadow 0.2s;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238a9bb0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 0.75rem center;
-    }
-
-    .lang-select:focus {
-      outline: none;
-      border-color: var(--blue-glow);
-      box-shadow: 0 0 0 3px rgba(30, 111, 255, 0.15);
-    }
-
-    .swap-btn {
-      width: 40px; height: 40px;
-      border-radius: 10px;
-      border: 1px solid var(--glass-border);
-      background: rgba(30, 111, 255, 0.1);
-      color: var(--blue-bright);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform 0.25s, background 0.2s;
-      flex-shrink: 0;
-    }
-
-    .swap-btn:hover {
-      background: rgba(30, 111, 255, 0.2);
-      transform: rotate(180deg);
-    }
-
-    /* ── Mic button ── */
-    .mic-section {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1rem;
-      padding: 1.5rem 0;
-    }
-
-    .mic-btn {
-      position: relative;
-      width: 88px; height: 88px;
-      border-radius: 50%;
-      border: 2px solid transparent;
-      background:
-        linear-gradient(var(--bg-mid), var(--bg-mid)) padding-box,
-        var(--chrome) border-box;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .mic-btn:hover { transform: scale(1.05); }
-
-    .mic-btn:active { transform: scale(0.97); }
-
-    .mic-btn.recording {
-      box-shadow: 0 0 0 6px rgba(30, 111, 255, 0.15), 0 0 40px rgba(30, 111, 255, 0.4);
-      animation: mic-pulse 1.5s ease infinite;
-    }
-
-    @keyframes mic-pulse {
-      0%, 100% { box-shadow: 0 0 0 6px rgba(30, 111, 255, 0.15), 0 0 40px rgba(30, 111, 255, 0.4); }
-      50% { box-shadow: 0 0 0 12px rgba(30, 111, 255, 0.08), 0 0 60px rgba(30, 111, 255, 0.6); }
-    }
-
-    .mic-btn svg {
-      width: 32px; height: 32px;
-      fill: var(--silver-bright);
-    }
-
-    .mic-btn.recording svg { fill: var(--blue-bright); }
-
-    .mic-status {
-      font-size: 0.8rem;
-      color: var(--text-dim);
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .mic-status.active { color: var(--blue-bright); }
-
-    /* ── Text areas ── */
-    .text-panels {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-    }
-
-    @media (max-width: 640px) {
-      .text-panels { grid-template-columns: 1fr; }
-    }
-
-    .text-panel { display: flex; flex-direction: column; gap: 0.5rem; }
-
-    .text-panel__header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .text-panel__title {
-      font-size: 0.75rem;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--silver-dim);
-    }
-
-    .text-panel__char {
-      font-size: 0.7rem;
-      color: var(--silver-dim);
-    }
-
-    textarea {
-      width: 100%;
-      min-height: 140px;
-      resize: vertical;
-      background: rgba(3, 7, 18, 0.5);
-      border: 1px solid var(--glass-border);
-      border-radius: 12px;
-      color: var(--text);
-      font-family: var(--font-body);
-      font-size: 0.95rem;
-      font-weight: 300;
-      padding: 0.85rem 1rem;
-      line-height: 1.7;
-      transition: border-color 0.2s;
-    }
-
-    textarea:focus {
-      outline: none;
-      border-color: rgba(30, 111, 255, 0.4);
-    }
-
-    textarea::placeholder { color: var(--silver-dim); opacity: 0.6; }
-
-    /* ── Action bar ── */
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.6rem;
-      margin-top: 1.25rem;
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.45rem;
-      padding: 0.6rem 1.1rem;
-      border-radius: 10px;
-      border: 1px solid var(--glass-border);
-      background: rgba(3, 7, 18, 0.5);
-      color: var(--text);
-      font-family: var(--font-body);
-      font-size: 0.82rem;
-      font-weight: 500;
-      letter-spacing: 0.04em;
-      cursor: pointer;
-      transition: background 0.2s, border-color 0.2s, transform 0.15s;
-    }
-
-    .btn:hover {
-      background: rgba(30, 111, 255, 0.12);
-      border-color: rgba(30, 111, 255, 0.3);
-    }
-
-    .btn:active { transform: scale(0.97); }
-
-    .btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .btn--primary {
-      background: linear-gradient(135deg, #1e6fff 0%, #0ea5e9 100%);
-      border-color: transparent;
-      color: #fff;
-    }
-
-    .btn--primary:hover {
-      background: linear-gradient(135deg, #3b82f6 0%, #38bdf8 100%);
-      border-color: transparent;
-    }
-
-    .btn svg {
-      width: 16px; height: 16px;
-      fill: currentColor;
-      flex-shrink: 0;
-    }
-
-    /* ── Toast ── */
-    .toast {
-      position: fixed;
-      bottom: 2rem;
-      left: 50%;
-      transform: translateX(-50%) translateY(80px);
-      background: rgba(10, 22, 40, 0.92);
-      backdrop-filter: blur(12px);
-      border: 1px solid var(--glass-border);
-      border-radius: 10px;
-      padding: 0.75rem 1.25rem;
-      font-size: 0.85rem;
-      color: var(--text);
-      z-index: 100;
-      opacity: 0;
-      transition: transform 0.35s ease, opacity 0.35s ease;
-      pointer-events: none;
-    }
-
-    .toast.show {
-      transform: translateX(-50%) translateY(0);
-      opacity: 1;
-    }
-
-    .toast.error { border-color: rgba(239, 68, 68, 0.4); color: #fca5a5; }
-
-    /* ── Footer ── */
-    .footer {
-      text-align: center;
-      padding: 2.5rem 0 0;
-      font-size: 0.75rem;
-      color: var(--silver-dim);
-      letter-spacing: 0.06em;
-    }
-
-    .footer a {
-      color: var(--blue-bright);
-      text-decoration: none;
-    }
-
-    .footer a:hover { text-decoration: underline; }
-
-    /* ── Loading spinner on translate ── */
-    .btn.loading { position: relative; color: transparent; pointer-events: none; }
-
-    .btn.loading::after {
-      content: '';
-      position: absolute;
-      width: 16px; height: 16px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      left: 50%; top: 50%;
-      margin: -8px 0 0 -8px;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .unsupported {
-      display: none;
-      text-align: center;
-      padding: 3rem 1rem;
-      color: #fca5a5;
-    }
-
-    .unsupported.show { display: block; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VOXLY — Live Translate &amp; Summarize</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Michroma&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-deep:#030712;
+    --bg-mid:#0a1628;
+    --card:rgba(10,22,40,0.72);
+    --ink:#e8edf4;
+    --muted:#8a9bb0;
+    --silver:#c8d4e0;
+    --accent:#1e6fff;
+    --accent-dark:#0ea5e9;
+    --accent-glow:rgba(30,111,255,0.25);
+    --danger:#ef4444;
+    --border:rgba(200,212,224,0.12);
+    --radius:16px;
+    --font-display:'Michroma',sans-serif;
+    --font-body:'Outfit',sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:var(--font-body);
+    background:var(--bg-deep);
+    color:var(--ink);
+    min-height:100dvh;
+    line-height:1.6;
+  }
+  .ambient{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+  .ambient__grid{position:absolute;inset:0;
+    background-image:linear-gradient(rgba(30,111,255,0.04) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(30,111,255,0.04) 1px,transparent 1px);
+    background-size:60px 60px;
+    mask-image:radial-gradient(ellipse 80% 70% at 50% 20%,black 20%,transparent 75%);}
+  .ambient__orb{position:absolute;border-radius:50%;filter:blur(100px);opacity:0.3;}
+  .ambient__orb--1{width:500px;height:500px;background:radial-gradient(circle,#1e6fff 0%,transparent 70%);top:-10%;left:-5%;}
+  .ambient__orb--2{width:400px;height:400px;background:radial-gradient(circle,#0ea5e9 0%,transparent 70%);bottom:-5%;right:-5%;}
+
+  .wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:32px 20px 60px;}
+  header{margin-bottom:28px;text-align:center;}
+  .hero-badge{display:inline-flex;align-items:center;gap:0.5rem;padding:0.35rem 1rem;border-radius:999px;
+    border:1px solid var(--border);background:rgba(30,111,255,0.08);font-size:0.65rem;
+    letter-spacing:0.15em;text-transform:uppercase;color:var(--accent-dark);margin-bottom:1rem;}
+  .hero-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);}
+  header h1{
+    font-family:var(--font-display);font-size:clamp(1.6rem,4vw,2.4rem);letter-spacing:0.06em;margin:0 0 8px;
+    background:linear-gradient(135deg,#8a9bb0 0%,#eef2f7 35%,#5a6d82 70%,#c8d4e0 100%);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  }
+  header p{margin:0;color:var(--muted);font-size:0.95rem;font-weight:300;max-width:560px;margin-inline:auto;}
+
+  .layout{display:flex;gap:18px;align-items:flex-start;}
+  @media (max-width:880px){.layout{flex-direction:column;}}
+
+  .sidebar{
+    width:260px;flex-shrink:0;background:var(--card);backdrop-filter:blur(20px);
+    border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;
+  }
+  @media (max-width:880px){.sidebar{width:100%;}}
+  .sidebar.disabled{opacity:.55;pointer-events:none;}
+  .sidebar-head{display:flex;align-items:center;justify-content:space-between;
+    padding:14px 16px;border-bottom:1px solid var(--border);}
+  .sidebar-head h2{font-family:var(--font-display);font-size:0.65rem;text-transform:uppercase;
+    letter-spacing:0.15em;color:var(--muted);margin:0;}
+  .sidebar-head button{padding:6px 10px;font-size:0.78rem;}
+  .lesson-list{max-height:480px;overflow-y:auto;}
+  .lesson-row{
+    display:flex;justify-content:space-between;align-items:flex-start;gap:6px;
+    padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;
+  }
+  .lesson-row:hover{background:rgba(30,111,255,0.06);}
+  .lesson-row.active{background:rgba(30,111,255,0.12);border-left:3px solid var(--accent);}
+  .lesson-row .info{min-width:0;}
+  .lesson-row .name{font-size:0.88rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .lesson-row .meta{font-size:0.72rem;color:var(--muted);margin-top:2px;}
+  .lesson-row .del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.95rem;padding:2px 4px;line-height:1;}
+  .lesson-row .del:hover{color:var(--danger);}
+  .sidebar-foot{padding:10px 16px;border-top:1px solid var(--border);}
+  .sidebar-foot button{width:100%;}
+  .empty-hint{padding:16px;font-size:0.82rem;color:var(--muted);}
+
+  .main{flex:1;min-width:0;}
+  .lesson-name-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .lesson-name-row input[type="text"].name-input{
+    font-family:var(--font-display);font-size:0.95rem;font-weight:400;padding:8px 10px;
+    border:1px solid transparent;border-radius:8px;flex:1;min-width:160px;
+    background:transparent;color:var(--silver);letter-spacing:0.04em;
+  }
+  .lesson-name-row input[type="text"].name-input:hover,
+  .lesson-name-row input[type="text"].name-input:focus{border-color:var(--border);background:rgba(3,7,18,0.5);outline:none;}
+  .saved-indicator{font-size:0.78rem;color:var(--muted);white-space:nowrap;}
+
+  .controls{
+    display:flex;flex-wrap:wrap;gap:12px;align-items:center;
+    background:var(--card);backdrop-filter:blur(20px);border:1px solid var(--border);
+    border-radius:var(--radius);padding:16px;margin-bottom:18px;
+  }
+  .field{display:flex;flex-direction:column;gap:4px;}
+  .field label{font-size:0.65rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.12em;}
+  select, input[type="text"], input[type="password"]{
+    padding:8px 10px;border-radius:10px;border:1px solid var(--border);
+    background:rgba(3,7,18,0.6);color:var(--ink);font-family:var(--font-body);font-size:0.9rem;
+  }
+  select:focus, input:focus{outline:none;border-color:rgba(30,111,255,0.4);box-shadow:0 0 0 3px var(--accent-glow);}
+  select{min-width:170px;cursor:pointer;}
+  button{
+    border:none;border-radius:10px;padding:10px 18px;font-family:var(--font-body);
+    font-size:0.85rem;font-weight:500;letter-spacing:0.04em;cursor:pointer;transition:all .15s ease;
+  }
+  button:disabled{opacity:.4;cursor:not-allowed;}
+  .btn-primary{background:linear-gradient(135deg,#1e6fff 0%,#0ea5e9 100%);color:#fff;}
+  .btn-primary:hover:not(:disabled){filter:brightness(1.1);}
+  .btn-stop{background:var(--danger);color:#fff;}
+  .btn-stop:hover:not(:disabled){filter:brightness(1.1);}
+  .btn-ghost{background:rgba(3,7,18,0.5);border:1px solid var(--border);color:var(--ink);}
+  .btn-ghost:hover:not(:disabled){background:rgba(30,111,255,0.12);border-color:rgba(30,111,255,0.3);}
+  .btn-sm{padding:6px 12px;font-size:0.78rem;}
+
+  .status-row{display:flex;align-items:center;gap:8px;margin-left:auto;font-size:0.82rem;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--muted);}
+  .dot.live{background:var(--accent);animation:pulse 1.2s infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(30,111,255,.5);}70%{box-shadow:0 0 0 8px rgba(30,111,255,0);}100%{box-shadow:0 0 0 0 rgba(30,111,255,0);}}
+
+  .panels{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;}
+  @media (max-width:720px){.panels{grid-template-columns:1fr;}}
+  .panel{
+    background:var(--card);backdrop-filter:blur(20px);border:1px solid var(--border);
+    border-radius:var(--radius);display:flex;flex-direction:column;min-height:280px;
+  }
+  .panel h2{font-family:var(--font-display);font-size:0.65rem;text-transform:uppercase;letter-spacing:0.15em;
+    color:var(--muted);margin:0;padding:14px 16px;border-bottom:1px solid var(--border);}
+  .panel .body{
+    padding:16px;flex:1;overflow-y:auto;font-size:0.97rem;font-weight:300;
+    line-height:1.65;white-space:pre-wrap;max-height:380px;
+  }
+  .interim{color:var(--muted);font-style:italic;}
+  .placeholder{color:var(--muted);opacity:0.6;}
+
+  .summary-panel{background:var(--card);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:18px;}
+  .summary-head{padding:14px 16px;border-bottom:1px solid var(--border);}
+  .summary-head h2{font-family:var(--font-display);font-size:0.65rem;text-transform:uppercase;letter-spacing:0.15em;color:var(--muted);margin:0;}
+  .summary-settings{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding:14px 16px;border-bottom:1px solid var(--border);background:rgba(3,7,18,0.3);}
+  .summary-settings .field{min-width:130px;}
+  .summary-settings input{min-width:200px;}
+  .summary-actions{padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .summary-body{padding:0 16px 16px;font-size:0.95rem;font-weight:300;line-height:1.65;white-space:pre-wrap;min-height:60px;}
+  .privacy-note{padding:0 16px 14px;font-size:0.76rem;color:var(--muted);line-height:1.5;}
+
+  .footer-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;}
+  .msg{margin-top:10px;font-size:0.85rem;min-height:1.2em;}
+  .msg.error{color:#fca5a5;}
+  .msg.info{color:var(--muted);}
+
+  .note{margin-top:24px;font-size:0.78rem;color:var(--muted);line-height:1.6;text-align:center;}
+  .note code{background:rgba(30,111,255,0.1);padding:1px 6px;border-radius:4px;color:var(--silver);}
+  .note a{color:var(--accent-dark);text-decoration:none;}
+  .note a:hover{text-decoration:underline;}
+</style>
 </head>
 <body>
+<div class="ambient" aria-hidden="true">
+  <div class="ambient__grid"></div>
+  <div class="ambient__orb ambient__orb--1"></div>
+  <div class="ambient__orb ambient__orb--2"></div>
+</div>
+<div class="wrap">
+  <header>
+    <div class="hero-badge"><span class="hero-badge-dot"></span> Live · Translate · Summarize</div>
+    <h1>VOXLY</h1>
+    <p>Speak in any language. Get live translation, text-to-voice playback, saved sessions, and AI summaries — zero friction.</p>
+  </header>
 
-  <div class="ambient" aria-hidden="true">
-    <div class="ambient__grid"></div>
-    <div class="ambient__orb ambient__orb--1"></div>
-    <div class="ambient__orb ambient__orb--2"></div>
-    <div class="ambient__orb ambient__orb--3"></div>
-  </div>
-
-  <div class="page">
-    <header class="hero">
-      <div class="hero__badge">
-        <span class="hero__badge-dot"></span>
-        Live · Voice · Translate
+  <div class="layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-head">
+        <h2>My Lessons</h2>
+        <button id="newLessonBtn" class="btn-primary btn-sm">+ New</button>
       </div>
-      <h1 class="hero__logo">VOXLY</h1>
-      <p class="hero__tagline">Speak in any language. Hear it back in another. Zero friction.</p>
-      <p class="hero__sub">Built for the next gen · no downloads · just talk</p>
-    </header>
+      <div class="lesson-list" id="lessonList"></div>
+      <div class="sidebar-foot">
+        <button id="exportAllBtn" class="btn-ghost btn-sm">Export All (.json)</button>
+      </div>
+    </aside>
 
-    <div class="unsupported" id="unsupported">
-      Your browser doesn't support speech recognition. Try Chrome or Edge on desktop.
-    </div>
+    <main class="main">
+      <div class="lesson-name-row">
+        <input type="text" id="lessonNameInput" class="name-input" placeholder="Lesson name" value="">
+        <span class="saved-indicator" id="savedIndicator"></span>
+      </div>
 
-    <main id="app">
-      <!-- Languages -->
-      <section class="card">
-        <div class="card__label">Languages</div>
-        <div class="lang-row">
-          <select class="lang-select" id="langFrom" aria-label="Source language"></select>
-          <button class="swap-btn" id="swapLangs" title="Swap languages" aria-label="Swap languages">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg>
-          </button>
-          <select class="lang-select" id="langTo" aria-label="Target language"></select>
+      <div class="controls">
+        <div class="field">
+          <label for="sourceLang">Teacher speaks</label>
+          <select id="sourceLang"></select>
         </div>
-      </section>
-
-      <!-- Mic -->
-      <section class="card">
-        <div class="card__label">Voice Input</div>
-        <div class="mic-section">
-          <button class="mic-btn" id="micBtn" aria-label="Start recording">
-            <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
-          </button>
-          <span class="mic-status" id="micStatus">Tap to speak</span>
+        <div class="field">
+          <label for="targetLang">Translate to</label>
+          <select id="targetLang"></select>
         </div>
-      </section>
+        <button id="toggleBtn" class="btn-primary">Start Listening</button>
+        <button id="clearBtn" class="btn-ghost">Clear</button>
+        <div class="status-row">
+          <span class="dot" id="recDot"></span>
+          <span id="statusText">Idle</span>
+        </div>
+      </div>
 
-      <!-- Text panels -->
-      <section class="card">
-        <div class="card__label">Transcript</div>
-        <div class="text-panels">
-          <div class="text-panel">
-            <div class="text-panel__header">
-              <span class="text-panel__title">Original</span>
-              <span class="text-panel__char" id="charOriginal">0 chars</span>
-            </div>
-            <textarea id="textOriginal" placeholder="Your spoken words appear here…"></textarea>
+      <div class="panels">
+        <div class="panel">
+          <h2>Transcript (what the teacher said)</h2>
+          <div class="body" id="transcriptBody"><span class="placeholder">Press “Start Listening” and begin speaking…</span></div>
+        </div>
+        <div class="panel">
+          <h2>Live Translation</h2>
+          <div class="body" id="translationBody"><span class="placeholder">Translated text will appear here…</span></div>
+        </div>
+      </div>
+
+      <div class="summary-panel">
+        <div class="summary-head"><h2>Lesson Summary (AI)</h2></div>
+        <div class="summary-settings">
+          <div class="field">
+            <label for="providerSelect">Provider</label>
+            <select id="providerSelect">
+              <option value="anthropic">Anthropic (Claude)</option>
+              <option value="openai">OpenAI</option>
+            </select>
           </div>
-          <div class="text-panel">
-            <div class="text-panel__header">
-              <span class="text-panel__title">Translation</span>
-              <span class="text-panel__char" id="charTranslated">0 chars</span>
-            </div>
-            <textarea id="textTranslated" placeholder="Translated text appears here…"></textarea>
+          <div class="field">
+            <label for="apiKeyInput">API key</label>
+            <input type="password" id="apiKeyInput" placeholder="Paste your API key">
+          </div>
+          <div class="field">
+            <label for="modelInput">Model (optional)</label>
+            <input type="text" id="modelInput" placeholder="default for provider">
           </div>
         </div>
-
-        <div class="actions">
-          <button class="btn btn--primary" id="btnTranslate">
-            <svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>
-            Translate
-          </button>
-          <button class="btn" id="btnSpeakOriginal">
-            <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-            Hear Original
-          </button>
-          <button class="btn" id="btnSpeakTranslated">
-            <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-            Hear Translation
-          </button>
-          <button class="btn" id="btnCopy">
-            <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-            Copy
-          </button>
-          <button class="btn" id="btnSave">
-            <svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59 2.59L17 11.5l-1.41-1.41-2.59 2.59-2.59-2.59L9.5 11.5l3.09 3.17zM11 5v6.17l2.59-2.59L15 10.5l-4 4-4-4 1.41-1.41L11 11.17V5h2z"/></svg>
-            Save .txt
-          </button>
-          <button class="btn" id="btnClear">
-            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-            Clear
-          </button>
+        <div class="summary-actions">
+          <button id="generateSummaryBtn" class="btn-primary">Generate Summary</button>
+          <button id="downloadSummaryBtn" class="btn-ghost" disabled>Download Summary (.txt)</button>
         </div>
-      </section>
+        <div class="summary-body" id="summaryBody"><span class="placeholder">Summary of the original transcript will appear here once generated.</span></div>
+        <p class="privacy-note">Your API key is stored only in this browser's local storage and sent directly to the provider you choose, to generate the summary. It is never sent anywhere else.</p>
+      </div>
+
+      <div class="footer-actions">
+        <button id="speakOriginalBtn" class="btn-ghost">Hear Original</button>
+        <button id="speakTranslationBtn" class="btn-ghost">Hear Translation</button>
+        <button id="downloadTranscript" class="btn-ghost" disabled>Download Transcript (.txt)</button>
+        <button id="downloadTranslation" class="btn-ghost" disabled>Download Translation (.txt)</button>
+        <button id="downloadAudio" class="btn-ghost" disabled>Download Recording (.webm)</button>
+      </div>
+      <div id="msg" class="msg"></div>
+
+      <p class="note">
+        Speech recognition works best in <strong>Chrome</strong> or <strong>Edge</strong>. Live translation uses the free <code>MyMemory</code> API. Sessions autosave in this browser — use “Export All” to back up. Hosted on <a href="https://github.com/yunesinjust/voxly-voice-translator" target="_blank" rel="noopener">GitHub</a>.
+      </p>
     </main>
-
-    <footer class="footer">
-      VOXLY · Voice → Text → Translate → Voice · <a href="https://github.com" id="githubLink" target="_blank" rel="noopener">Open Source</a>
-    </footer>
   </div>
+</div>
 
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+(function(){
+  // ============================================================
+  // Language data
+  // ============================================================
+  const SPEECH_LANGS = [
+    {name:"English (US)", code:"en-US"},
+    {name:"English (UK)", code:"en-GB"},
+    {name:"Spanish", code:"es-ES"},
+    {name:"French", code:"fr-FR"},
+    {name:"German", code:"de-DE"},
+    {name:"Italian", code:"it-IT"},
+    {name:"Portuguese (Brazil)", code:"pt-BR"},
+    {name:"Russian", code:"ru-RU"},
+    {name:"Japanese", code:"ja-JP"},
+    {name:"Korean", code:"ko-KR"},
+    {name:"Chinese (Mandarin)", code:"zh-CN"},
+    {name:"Arabic", code:"ar-SA"},
+    {name:"Hindi", code:"hi-IN"},
+    {name:"Persian (Farsi)", code:"fa-IR"},
+    {name:"Turkish", code:"tr-TR"},
+    {name:"Dutch", code:"nl-NL"},
+    {name:"Polish", code:"pl-PL"},
+    {name:"Vietnamese", code:"vi-VN"},
+    {name:"Indonesian", code:"id-ID"},
+    {name:"Swedish", code:"sv-SE"},
+  ];
+  const SPEECH_TO_TRANSLATE_CODE = {
+    "en-US":"en", "en-GB":"en", "es-ES":"es", "fr-FR":"fr", "de-DE":"de",
+    "it-IT":"it", "pt-BR":"pt", "ru-RU":"ru", "ja-JP":"ja", "ko-KR":"ko",
+    "zh-CN":"zh-CN", "ar-SA":"ar", "hi-IN":"hi", "fa-IR":"fa", "tr-TR":"tr",
+    "nl-NL":"nl", "pl-PL":"pl", "vi-VN":"vi", "id-ID":"id", "sv-SE":"sv"
+  };
+  const TRANSLATE_TARGETS = [
+    {name:"English", code:"en"}, {name:"Spanish", code:"es"}, {name:"French", code:"fr"},
+    {name:"German", code:"de"}, {name:"Italian", code:"it"}, {name:"Portuguese", code:"pt"},
+    {name:"Russian", code:"ru"}, {name:"Japanese", code:"ja"}, {name:"Korean", code:"ko"},
+    {name:"Chinese (Simplified)", code:"zh-CN"}, {name:"Arabic", code:"ar"}, {name:"Hindi", code:"hi"},
+    {name:"Persian (Farsi)", code:"fa"}, {name:"Turkish", code:"tr"}, {name:"Dutch", code:"nl"},
+    {name:"Polish", code:"pl"}, {name:"Vietnamese", code:"vi"}, {name:"Indonesian", code:"id"},
+    {name:"Swedish", code:"sv"},
+  ];
+  const DEFAULT_MODELS = { anthropic:"claude-haiku-4-5-20251001", openai:"gpt-4o-mini" };
+  const TRANSLATE_TO_SPEECH = {
+    en:"en-US", es:"es-ES", fr:"fr-FR", de:"de-DE", it:"it-IT", pt:"pt-PT",
+    ru:"ru-RU", ja:"ja-JP", ko:"ko-KR", "zh-CN":"zh-CN", ar:"ar-SA", hi:"hi-IN",
+    fa:"fa-IR", tr:"tr-TR", nl:"nl-NL", pl:"pl-PL", vi:"vi-VN", id:"id-ID", sv:"sv-SE"
+  };
 
-  <script>
-    const LANGUAGES = [
-      { code: 'en', name: 'English', speech: 'en-US' },
-      { code: 'es', name: 'Spanish', speech: 'es-ES' },
-      { code: 'fr', name: 'French', speech: 'fr-FR' },
-      { code: 'de', name: 'German', speech: 'de-DE' },
-      { code: 'it', name: 'Italian', speech: 'it-IT' },
-      { code: 'pt', name: 'Portuguese', speech: 'pt-PT' },
-      { code: 'ja', name: 'Japanese', speech: 'ja-JP' },
-      { code: 'ko', name: 'Korean', speech: 'ko-KR' },
-      { code: 'zh', name: 'Chinese', speech: 'zh-CN' },
-      { code: 'ar', name: 'Arabic', speech: 'ar-SA' },
-      { code: 'hi', name: 'Hindi', speech: 'hi-IN' },
-      { code: 'ru', name: 'Russian', speech: 'ru-RU' },
-      { code: 'nl', name: 'Dutch', speech: 'nl-NL' },
-      { code: 'pl', name: 'Polish', speech: 'pl-PL' },
-      { code: 'tr', name: 'Turkish', speech: 'tr-TR' },
-      { code: 'sv', name: 'Swedish', speech: 'sv-SE' },
-      { code: 'vi', name: 'Vietnamese', speech: 'vi-VN' },
-      { code: 'th', name: 'Thai', speech: 'th-TH' },
-      { code: 'id', name: 'Indonesian', speech: 'id-ID' },
-      { code: 'uk', name: 'Ukrainian', speech: 'uk-UA' },
-    ];
+  // ============================================================
+  // Storage helpers
+  // ============================================================
+  const LESSONS_KEY='lessonListenerApp_lessons_v1';
+  const SETTINGS_KEY='lessonListenerApp_settings_v1';
 
-    const $ = (sel) => document.querySelector(sel);
+  function loadLessons(){
+    try{ return JSON.parse(localStorage.getItem(LESSONS_KEY)) || []; }catch(e){ return []; }
+  }
+  function saveLessons(list){
+    try{ localStorage.setItem(LESSONS_KEY, JSON.stringify(list)); }catch(e){ showMsg('Could not save to browser storage: '+e.message, true); }
+  }
+  function loadSettings(){
+    try{ return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; }catch(e){ return {}; }
+  }
+  function saveSettings(s){
+    try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }catch(e){}
+  }
 
-    const els = {
-      langFrom: $('#langFrom'),
-      langTo: $('#langTo'),
-      swapLangs: $('#swapLangs'),
-      micBtn: $('#micBtn'),
-      micStatus: $('#micStatus'),
-      textOriginal: $('#textOriginal'),
-      textTranslated: $('#textTranslated'),
-      charOriginal: $('#charOriginal'),
-      charTranslated: $('#charTranslated'),
-      btnTranslate: $('#btnTranslate'),
-      btnSpeakOriginal: $('#btnSpeakOriginal'),
-      btnSpeakTranslated: $('#btnSpeakTranslated'),
-      btnCopy: $('#btnCopy'),
-      btnSave: $('#btnSave'),
-      btnClear: $('#btnClear'),
-      toast: $('#toast'),
-      unsupported: $('#unsupported'),
-      app: $('#app'),
+  // ============================================================
+  // DOM refs
+  // ============================================================
+  const sidebarEl=document.getElementById('sidebar');
+  const lessonListEl=document.getElementById('lessonList');
+  const newLessonBtn=document.getElementById('newLessonBtn');
+  const exportAllBtn=document.getElementById('exportAllBtn');
+  const lessonNameInput=document.getElementById('lessonNameInput');
+  const savedIndicator=document.getElementById('savedIndicator');
+
+  const sourceSelect=document.getElementById('sourceLang');
+  const targetSelect=document.getElementById('targetLang');
+  const toggleBtn=document.getElementById('toggleBtn');
+  const clearBtn=document.getElementById('clearBtn');
+  const recDot=document.getElementById('recDot');
+  const statusText=document.getElementById('statusText');
+  const transcriptBody=document.getElementById('transcriptBody');
+  const translationBody=document.getElementById('translationBody');
+  const downloadTranscriptBtn=document.getElementById('downloadTranscript');
+  const downloadTranslationBtn=document.getElementById('downloadTranslation');
+  const downloadAudioBtn=document.getElementById('downloadAudio');
+  const speakOriginalBtn=document.getElementById('speakOriginalBtn');
+  const speakTranslationBtn=document.getElementById('speakTranslationBtn');
+  const msgEl=document.getElementById('msg');
+
+  const providerSelect=document.getElementById('providerSelect');
+  const apiKeyInput=document.getElementById('apiKeyInput');
+  const modelInput=document.getElementById('modelInput');
+  const generateSummaryBtn=document.getElementById('generateSummaryBtn');
+  const downloadSummaryBtn=document.getElementById('downloadSummaryBtn');
+  const summaryBody=document.getElementById('summaryBody');
+
+  SPEECH_LANGS.forEach(l=>{ const o=document.createElement('option'); o.value=l.code; o.textContent=l.name; sourceSelect.appendChild(o); });
+  TRANSLATE_TARGETS.forEach(l=>{ const o=document.createElement('option'); o.value=l.code; o.textContent=l.name; targetSelect.appendChild(o); });
+
+  function showMsg(text,isError){
+    msgEl.textContent=text||'';
+    msgEl.className='msg '+(isError?'error':'info');
+  }
+
+  // ============================================================
+  // State
+  // ============================================================
+  let lessons=loadLessons();
+  let activeLessonId=null;
+  let isListening=false;
+  let finalTranscript='';
+  let translatedTranscript='';
+  let currentSummary='';
+  let processedLength=0;
+  let translationQueue=Promise.resolve();
+  let recognition=null;
+  let mediaStream=null;
+  let mediaRecorder=null;
+  let audioChunks=[];
+  let lastAudioUrl=null;
+
+  // ============================================================
+  // Lesson management
+  // ============================================================
+  function makeLesson(){
+    const now=new Date().toISOString();
+    return {
+      id: 'lsn_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),
+      name: 'Lesson – '+new Date().toLocaleString([], {dateStyle:'medium', timeStyle:'short'}),
+      createdAt: now,
+      updatedAt: now,
+      sourceLang: sourceSelect.value || 'en-US',
+      targetLang: targetSelect.value || 'es',
+      transcript: '',
+      translation: '',
+      summary: ''
+    };
+  }
+
+  function getActiveLesson(){
+    return lessons.find(l=>l.id===activeLessonId) || null;
+  }
+
+  function upsertActiveLesson(){
+    let lesson=getActiveLesson();
+    if(!lesson) return;
+    lesson.name=lessonNameInput.value.trim() || lesson.name;
+    lesson.sourceLang=sourceSelect.value;
+    lesson.targetLang=targetSelect.value;
+    lesson.transcript=finalTranscript;
+    lesson.translation=translatedTranscript;
+    lesson.summary=currentSummary;
+    lesson.updatedAt=new Date().toISOString();
+    saveLessons(lessons);
+    renderSidebar();
+    savedIndicator.textContent='Saved '+new Date(lesson.updatedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  }
+
+  function renderSidebar(){
+    const sorted=[...lessons].sort((a,b)=> new Date(b.updatedAt)-new Date(a.updatedAt));
+    lessonListEl.innerHTML='';
+    if(sorted.length===0){
+      lessonListEl.innerHTML='<div class="empty-hint">No lessons yet. Click “+ New” or just press Start Listening.</div>';
+      return;
+    }
+    sorted.forEach(l=>{
+      const row=document.createElement('div');
+      row.className='lesson-row'+(l.id===activeLessonId ? ' active' : '');
+      const info=document.createElement('div');
+      info.className='info';
+      const nameEl=document.createElement('div');
+      nameEl.className='name';
+      nameEl.textContent=l.name;
+      const metaEl=document.createElement('div');
+      metaEl.className='meta';
+      const dateStr=new Date(l.updatedAt).toLocaleDateString([], {month:'short', day:'numeric'});
+      metaEl.textContent=dateStr+' · '+(l.sourceLang||'').split('-')[0].toUpperCase()+' → '+(l.targetLang||'').toUpperCase();
+      info.appendChild(nameEl); info.appendChild(metaEl);
+      const delBtn=document.createElement('button');
+      delBtn.className='del'; delBtn.title='Delete lesson'; delBtn.textContent='✕';
+      delBtn.addEventListener('click', (e)=>{ e.stopPropagation(); deleteLesson(l.id); });
+      row.appendChild(info); row.appendChild(delBtn);
+      row.addEventListener('click', ()=>{ if(!isListening) selectLesson(l.id); });
+      lessonListEl.appendChild(row);
+    });
+  }
+
+  function selectLesson(id){
+    const lesson=lessons.find(l=>l.id===id);
+    if(!lesson) return;
+    activeLessonId=id;
+    lessonNameInput.value=lesson.name;
+    sourceSelect.value=lesson.sourceLang || 'en-US';
+    targetSelect.value=lesson.targetLang || 'es';
+    finalTranscript=lesson.transcript || '';
+    translatedTranscript=lesson.translation || '';
+    currentSummary=lesson.summary || '';
+    processedLength=finalTranscript.length;
+    renderTranscript('');
+    translationBody.textContent = translatedTranscript || '';
+    if(!translatedTranscript) translationBody.innerHTML='<span class="placeholder">Translated text will appear here…</span>';
+    downloadTranslationBtn.disabled = translatedTranscript.trim().length===0;
+    renderSummary();
+    resetAudioDownload();
+    showMsg('', false);
+    savedIndicator.textContent='Saved '+new Date(lesson.updatedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    renderSidebar();
+  }
+
+  function createNewLesson(){
+    const lesson=makeLesson();
+    lessons.push(lesson);
+    saveLessons(lessons);
+    selectLesson(lesson.id);
+  }
+
+  function deleteLesson(id){
+    const lesson=lessons.find(l=>l.id===id);
+    if(!lesson) return;
+    if(!window.confirm('Delete "'+lesson.name+'"? This cannot be undone.')) return;
+    lessons=lessons.filter(l=>l.id!==id);
+    saveLessons(lessons);
+    if(activeLessonId===id){
+      if(lessons.length>0){
+        const sorted=[...lessons].sort((a,b)=> new Date(b.updatedAt)-new Date(a.updatedAt));
+        selectLesson(sorted[0].id);
+      } else {
+        createNewLesson();
+      }
+    } else {
+      renderSidebar();
+    }
+  }
+
+  function exportAllLessons(){
+    if(lessons.length===0){ showMsg('No lessons to export yet.', false); return; }
+    downloadText('lessons-backup.json', JSON.stringify(lessons, null, 2));
+  }
+
+  function renderSummary(){
+    if(currentSummary){
+      summaryBody.textContent=currentSummary;
+      downloadSummaryBtn.disabled=false;
+    } else {
+      summaryBody.innerHTML='<span class="placeholder">Summary of the original transcript will appear here once generated.</span>';
+      downloadSummaryBtn.disabled=true;
+    }
+  }
+
+  // ============================================================
+  // Speech recognition
+  // ============================================================
+  const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognitionCtor){
+    showMsg("Your browser doesn't support live speech recognition. Please open this page in Chrome or Edge.", true);
+    toggleBtn.disabled=true;
+  }
+
+  function createRecognition(){
+    const r = new SpeechRecognitionCtor();
+    r.continuous=true;
+    r.interimResults=true;
+    r.lang=sourceSelect.value;
+
+    r.onresult=(event)=>{
+      let interim='';
+      for(let i=event.resultIndex;i<event.results.length;i++){
+        const res=event.results[i];
+        if(res.isFinal){
+          finalTranscript += res[0].transcript + ' ';
+        } else {
+          interim += res[0].transcript;
+        }
+      }
+      renderTranscript(interim);
+      if(finalTranscript.length>processedLength){
+        const newChunk=finalTranscript.slice(processedLength).trim();
+        processedLength=finalTranscript.length;
+        if(newChunk) queueTranslation(newChunk);
+        upsertActiveLesson();
+      }
     };
 
-    let recognition = null;
-    let isRecording = false;
-    let toastTimer = null;
-
-    function populateLanguages() {
-      const opts = LANGUAGES.map(l => `<option value="${l.code}">${l.name}</option>`).join('');
-      els.langFrom.innerHTML = opts;
-      els.langTo.innerHTML = opts;
-      els.langFrom.value = 'en';
-      els.langTo.value = 'es';
-    }
-
-    function getLang(code) {
-      return LANGUAGES.find(l => l.code === code) || LANGUAGES[0];
-    }
-
-    function showToast(msg, isError = false) {
-      clearTimeout(toastTimer);
-      els.toast.textContent = msg;
-      els.toast.className = 'toast show' + (isError ? ' error' : '');
-      toastTimer = setTimeout(() => els.toast.classList.remove('show'), 2800);
-    }
-
-    function updateCharCounts() {
-      els.charOriginal.textContent = `${els.textOriginal.value.length} chars`;
-      els.charTranslated.textContent = `${els.textTranslated.value.length} chars`;
-    }
-
-    function initSpeechRecognition() {
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SR) {
-        els.unsupported.classList.add('show');
-        els.app.style.display = 'none';
+    r.onerror=(event)=>{
+      if(event.error==='no-speech') return;
+      if(event.error==='not-allowed' || event.error==='audio-capture'){
+        showMsg('Microphone access was blocked or unavailable. Please allow microphone permissions and try again.', true);
+        stopAll();
         return;
       }
+      showMsg('Speech recognition error: '+event.error, true);
+    };
 
-      recognition = new SR();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-
-      recognition.onstart = () => {
-        isRecording = true;
-        els.micBtn.classList.add('recording');
-        els.micStatus.textContent = 'Listening…';
-        els.micStatus.classList.add('active');
-      };
-
-      recognition.onend = () => {
-        isRecording = false;
-        els.micBtn.classList.remove('recording');
-        els.micStatus.textContent = 'Tap to speak';
-        els.micStatus.classList.remove('active');
-      };
-
-      recognition.onerror = (e) => {
-        if (e.error === 'no-speech') {
-          showToast('No speech detected — try again', true);
-        } else if (e.error !== 'aborted') {
-          showToast(`Mic error: ${e.error}`, true);
-        }
-      };
-
-      recognition.onresult = (e) => {
-        let final = '';
-        let interim = '';
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-          const t = e.results[i][0].transcript;
-          if (e.results[i].isFinal) final += t;
-          else interim += t;
-        }
-        if (final) {
-          const cur = els.textOriginal.value;
-          els.textOriginal.value = cur ? cur + ' ' + final.trim() : final.trim();
-          updateCharCounts();
-        } else if (interim) {
-          els.micStatus.textContent = interim.slice(0, 40) + (interim.length > 40 ? '…' : '');
-        }
-      };
-    }
-
-    function toggleRecording() {
-      if (!recognition) return;
-      if (isRecording) {
-        recognition.stop();
-      } else {
-        recognition.lang = getLang(els.langFrom.value).speech;
-        try {
-          recognition.start();
-        } catch {
-          recognition.stop();
-          setTimeout(() => recognition.start(), 200);
-        }
+    r.onend=()=>{
+      if(isListening){
+        try{ r.start(); } catch(e){ /* already running or transient restart issue */ }
       }
+    };
+
+    return r;
+  }
+
+  function renderTranscript(interim){
+    transcriptBody.innerHTML='';
+    if(!finalTranscript && !interim){
+      transcriptBody.innerHTML='<span class="placeholder">Press “Start Listening” and begin speaking…</span>';
+      downloadTranscriptBtn.disabled=true;
+      return;
     }
-
-    async function translateText() {
-      const text = els.textOriginal.value.trim();
-      if (!text) {
-        showToast('Nothing to translate — speak or type first', true);
-        return;
-      }
-
-      const from = els.langFrom.value;
-      const to = els.langTo.value;
-
-      if (from === to) {
-        els.textTranslated.value = text;
-        updateCharCounts();
-        showToast('Same language — copied as-is');
-        return;
-      }
-
-      els.btnTranslate.classList.add('loading');
-      els.btnTranslate.disabled = true;
-
-      try {
-        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}`;
-        const res = await fetch(url);
-        const data = await res.json();
-
-        if (data.responseStatus === 200 && data.responseData?.translatedText) {
-          els.textTranslated.value = data.responseData.translatedText;
-          updateCharCounts();
-          showToast('Translated');
-        } else {
-          throw new Error(data.responseDetails || 'Translation failed');
-        }
-      } catch (err) {
-        showToast(err.message || 'Translation failed — try again', true);
-      } finally {
-        els.btnTranslate.classList.remove('loading');
-        els.btnTranslate.disabled = false;
-      }
+    const finalSpan=document.createElement('span');
+    finalSpan.textContent=finalTranscript;
+    transcriptBody.appendChild(finalSpan);
+    if(interim){
+      const interimSpan=document.createElement('span');
+      interimSpan.className='interim';
+      interimSpan.textContent=interim;
+      transcriptBody.appendChild(interimSpan);
     }
+    transcriptBody.scrollTop=transcriptBody.scrollHeight;
+    downloadTranscriptBtn.disabled = finalTranscript.trim().length===0;
+  }
 
-    function speak(text, langCode) {
-      if (!text.trim()) {
-        showToast('Nothing to speak', true);
-        return;
-      }
-      window.speechSynthesis.cancel();
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.lang = getLang(langCode).speech;
-      utter.rate = 0.95;
-      utter.onerror = () => showToast('Speech playback failed', true);
-      window.speechSynthesis.speak(utter);
-    }
+  function appendTranslation(text){
+    translatedTranscript += text + ' ';
+    translationBody.textContent=translatedTranscript;
+    translationBody.scrollTop=translationBody.scrollHeight;
+    downloadTranslationBtn.disabled = translatedTranscript.trim().length===0;
+    upsertActiveLesson();
+  }
 
-    function copyTranslation() {
-      const text = els.textTranslated.value || els.textOriginal.value;
-      if (!text.trim()) {
-        showToast('Nothing to copy', true);
-        return;
-      }
-      navigator.clipboard.writeText(text).then(
-        () => showToast('Copied to clipboard'),
-        () => showToast('Copy failed', true)
-      );
-    }
-
-    function saveToFile() {
-      const original = els.textOriginal.value.trim();
-      const translated = els.textTranslated.value.trim();
-      if (!original && !translated) {
-        showToast('Nothing to save', true);
-        return;
-      }
-
-      const from = getLang(els.langFrom.value).name;
-      const to = getLang(els.langTo.value).name;
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      const content = [
-        'VOXLY Translation Export',
-        `Date: ${new Date().toLocaleString()}`,
-        `Languages: ${from} → ${to}`,
-        '',
-        '── Original ──',
-        original || '(empty)',
-        '',
-        '── Translation ──',
-        translated || '(empty)',
-      ].join('\n');
-
-      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `voxly-${timestamp}.txt`;
-      a.click();
-      URL.revokeObjectURL(a.href);
-      showToast('File saved');
-    }
-
-    function clearAll() {
-      els.textOriginal.value = '';
-      els.textTranslated.value = '';
-      updateCharCounts();
-      window.speechSynthesis.cancel();
-      if (isRecording && recognition) recognition.stop();
-      showToast('Cleared');
-    }
-
-    function swapLanguages() {
-      const tmp = els.langFrom.value;
-      els.langFrom.value = els.langTo.value;
-      els.langTo.value = tmp;
-
-      const tmpText = els.textOriginal.value;
-      els.textOriginal.value = els.textTranslated.value;
-      els.textTranslated.value = tmpText;
-      updateCharCounts();
-    }
-
-    // Events
-    populateLanguages();
-    initSpeechRecognition();
-    updateCharCounts();
-
-    els.micBtn.addEventListener('click', toggleRecording);
-    els.btnTranslate.addEventListener('click', translateText);
-    els.btnSpeakOriginal.addEventListener('click', () => speak(els.textOriginal.value, els.langFrom.value));
-    els.btnSpeakTranslated.addEventListener('click', () => speak(els.textTranslated.value, els.langTo.value));
-    els.btnCopy.addEventListener('click', copyTranslation);
-    els.btnSave.addEventListener('click', saveToFile);
-    els.btnClear.addEventListener('click', clearAll);
-    els.swapLangs.addEventListener('click', swapLanguages);
-
-    els.textOriginal.addEventListener('input', updateCharCounts);
-    els.textTranslated.addEventListener('input', updateCharCounts);
-
-    els.textOriginal.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) translateText();
+  function queueTranslation(text){
+    translationQueue = translationQueue.then(()=>translateChunk(text)).catch(err=>{
+      showMsg('Translation error: '+err.message, true);
     });
-  </script>
+  }
+
+  async function translateChunk(text){
+    const sourceCode = SPEECH_TO_TRANSLATE_CODE[sourceSelect.value] || 'en';
+    const targetCode = targetSelect.value;
+    if(sourceCode===targetCode){ appendTranslation(text); return; }
+    const url='https://api.mymemory.translated.net/get?q='+encodeURIComponent(text)+'&langpair='+sourceCode+'|'+targetCode;
+    const res=await fetch(url);
+    if(!res.ok) throw new Error('network error ('+res.status+')');
+    const data=await res.json();
+    let translated=data && data.responseData && data.responseData.translatedText;
+    if(!translated || /MYMEMORY WARNING/i.test(translated)){
+      showMsg('Translation service quota reached for now. Try again later or shorten your session.', true);
+      return;
+    }
+    appendTranslation(translated);
+  }
+
+  // ============================================================
+  // Recording + control flow
+  // ============================================================
+  function resetAudioDownload(){
+    if(lastAudioUrl){ URL.revokeObjectURL(lastAudioUrl); lastAudioUrl=null; }
+    downloadAudioBtn.disabled=true;
+    delete downloadAudioBtn.dataset.url;
+  }
+
+  async function startAll(){
+    showMsg('', false);
+    try{
+      mediaStream = await navigator.mediaDevices.getUserMedia({audio:true});
+    }catch(e){
+      showMsg('Could not access your microphone: '+e.message, true);
+      return;
+    }
+
+    audioChunks=[];
+    try{
+      mediaRecorder = new MediaRecorder(mediaStream);
+      mediaRecorder.ondataavailable=(e)=>{ if(e.data && e.data.size>0) audioChunks.push(e.data); };
+      mediaRecorder.onstop=()=>{
+        const blob=new Blob(audioChunks, {type:'audio/webm'});
+        if(lastAudioUrl) URL.revokeObjectURL(lastAudioUrl);
+        lastAudioUrl=URL.createObjectURL(blob);
+        downloadAudioBtn.disabled = blob.size===0;
+        downloadAudioBtn.dataset.url=lastAudioUrl;
+      };
+      mediaRecorder.start();
+    }catch(e){
+      showMsg('Audio recording is not supported in this browser; live transcription will still work.', true);
+    }
+
+    recognition = createRecognition();
+    isListening=true;
+    try{
+      recognition.start();
+    }catch(e){
+      showMsg('Could not start speech recognition: '+e.message, true);
+      isListening=false;
+      return;
+    }
+
+    toggleBtn.textContent='Stop Listening';
+    toggleBtn.classList.remove('btn-primary');
+    toggleBtn.classList.add('btn-stop');
+    recDot.classList.add('live');
+    statusText.textContent='Listening…';
+    sourceSelect.disabled=true;
+    sidebarEl.classList.add('disabled');
+    newLessonBtn.disabled=true;
+  }
+
+  function stopAll(){
+    isListening=false;
+    if(recognition){ try{ recognition.stop(); }catch(e){} }
+    if(mediaRecorder && mediaRecorder.state!=='inactive'){ try{ mediaRecorder.stop(); }catch(e){} }
+    if(mediaStream){ mediaStream.getTracks().forEach(t=>t.stop()); }
+    toggleBtn.textContent='Start Listening';
+    toggleBtn.classList.remove('btn-stop');
+    toggleBtn.classList.add('btn-primary');
+    recDot.classList.remove('live');
+    statusText.textContent='Idle';
+    sourceSelect.disabled=false;
+    sidebarEl.classList.remove('disabled');
+    newLessonBtn.disabled=false;
+    upsertActiveLesson();
+  }
+
+  toggleBtn.addEventListener('click', ()=>{ if(isListening){ stopAll(); } else { startAll(); } });
+
+  clearBtn.addEventListener('click', ()=>{
+    if(!window.confirm('Clear this lesson\'s transcript, translation, and summary? This cannot be undone.')) return;
+    finalTranscript=''; translatedTranscript=''; currentSummary=''; processedLength=0;
+    renderTranscript('');
+    translationBody.innerHTML='<span class="placeholder">Translated text will appear here…</span>';
+    downloadTranscriptBtn.disabled=true;
+    downloadTranslationBtn.disabled=true;
+    renderSummary();
+    showMsg('', false);
+    upsertActiveLesson();
+  });
+
+  newLessonBtn.addEventListener('click', ()=>{ if(!isListening) createNewLesson(); });
+  exportAllBtn.addEventListener('click', exportAllLessons);
+
+  let nameDebounce=null;
+  lessonNameInput.addEventListener('input', ()=>{
+    clearTimeout(nameDebounce);
+    nameDebounce=setTimeout(upsertActiveLesson, 500);
+  });
+
+  // ============================================================
+  // Downloads
+  // ============================================================
+  function downloadText(filename, text){
+    const blob=new Blob([text], {type:'text/plain'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download=filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+  downloadTranscriptBtn.addEventListener('click', ()=>downloadText('transcript.txt', finalTranscript.trim()));
+  downloadTranslationBtn.addEventListener('click', ()=>downloadText('translation.txt', translatedTranscript.trim()));
+  downloadSummaryBtn.addEventListener('click', ()=>downloadText('summary.txt', currentSummary.trim()));
+  downloadAudioBtn.addEventListener('click', ()=>{
+    const url=downloadAudioBtn.dataset.url;
+    if(!url) return;
+    const a=document.createElement('a');
+    a.href=url; a.download='recording.webm';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  });
+
+  function speakText(text, langCode){
+    if(!text.trim()){ showMsg('Nothing to speak.', true); return; }
+    window.speechSynthesis.cancel();
+    const utter=new SpeechSynthesisUtterance(text);
+    utter.lang=langCode;
+    utter.rate=0.95;
+    utter.onerror=()=> showMsg('Speech playback failed.', true);
+    window.speechSynthesis.speak(utter);
+  }
+  speakOriginalBtn.addEventListener('click', ()=>{
+    speakText(finalTranscript.trim(), sourceSelect.value);
+  });
+  speakTranslationBtn.addEventListener('click', ()=>{
+    const lang=TRANSLATE_TO_SPEECH[targetSelect.value] || targetSelect.value;
+    speakText(translatedTranscript.trim(), lang);
+  });
+
+  // ============================================================
+  // AI Summary
+  // ============================================================
+  const settings=loadSettings();
+  if(settings.provider) providerSelect.value=settings.provider;
+  if(settings.apiKey) apiKeyInput.value=settings.apiKey;
+  if(settings.model) modelInput.value=settings.model;
+
+  function persistSettings(){
+    saveSettings({ provider:providerSelect.value, apiKey:apiKeyInput.value, model:modelInput.value });
+  }
+  providerSelect.addEventListener('change', persistSettings);
+  apiKeyInput.addEventListener('input', persistSettings);
+  modelInput.addEventListener('input', persistSettings);
+
+  async function callAnthropic(apiKey, model, prompt){
+    const res=await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{
+        'content-type':'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body: JSON.stringify({ model: model, max_tokens: 1024, messages:[{role:'user', content:prompt}] })
+    });
+    if(!res.ok){ const t=await res.text(); throw new Error('Anthropic API error ('+res.status+'): '+t.slice(0,220)); }
+    const data=await res.json();
+    return (data.content && data.content[0] && data.content[0].text) || '';
+  }
+
+  async function callOpenAI(apiKey, model, prompt){
+    const res=await fetch('https://api.openai.com/v1/chat/completions', {
+      method:'POST',
+      headers:{ 'content-type':'application/json', 'Authorization':'Bearer '+apiKey },
+      body: JSON.stringify({ model: model, messages:[{role:'user', content:prompt}], max_tokens: 1024 })
+    });
+    if(!res.ok){ const t=await res.text(); throw new Error('OpenAI API error ('+res.status+'): '+t.slice(0,220)); }
+    const data=await res.json();
+    return (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+  }
+
+  generateSummaryBtn.addEventListener('click', async ()=>{
+    const apiKey=apiKeyInput.value.trim();
+    const provider=providerSelect.value;
+    const model=modelInput.value.trim() || DEFAULT_MODELS[provider];
+    if(!finalTranscript.trim()){ showMsg('There\'s no transcript yet to summarize.', true); return; }
+    if(!apiKey){ showMsg('Enter an API key in the Lesson Summary section first.', true); return; }
+
+    const prompt='You are summarizing a classroom lesson transcript captured by speech recognition (it may contain minor transcription errors). '+
+      'Write a clear summary covering: the main topics covered, key points or explanations, any examples given, and homework or action items if mentioned. '+
+      'Use short paragraphs and plain dashes for bullet points — do not use markdown symbols like ** or #. '+
+      'Transcript:\n\n'+finalTranscript.trim();
+
+    generateSummaryBtn.disabled=true;
+    generateSummaryBtn.textContent='Generating…';
+    showMsg('', false);
+    try{
+      const text = provider==='openai'
+        ? await callOpenAI(apiKey, model, prompt)
+        : await callAnthropic(apiKey, model, prompt);
+      currentSummary=text.trim() || '[No summary returned]';
+      renderSummary();
+      upsertActiveLesson();
+    }catch(err){
+      showMsg('Summary failed: '+err.message+' (if this is a network/CORS error, try the other provider).', true);
+    }finally{
+      generateSummaryBtn.disabled=false;
+      generateSummaryBtn.textContent='Generate Summary';
+    }
+  });
+
+  // ============================================================
+  // Init
+  // ============================================================
+  function init(){
+    sourceSelect.value='en-US';
+    targetSelect.value='es';
+    if(lessons.length===0){
+      createNewLesson();
+    } else {
+      const sorted=[...lessons].sort((a,b)=> new Date(b.updatedAt)-new Date(a.updatedAt));
+      selectLesson(sorted[0].id);
+    }
+  }
+  init();
+
+})();
+</script>
 </body>
 </html>
