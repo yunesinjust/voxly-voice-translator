@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VOITRA — Clickable Prototype v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font-rounded: ui-rounded, "SF Pro Rounded", "Quicksand", system-ui, sans-serif;
+    --font-body: -apple-system, "SF Pro Text", "Manrope", system-ui, sans-serif;
+  }
+
+  /* ===== DAY — Silver / Orange gradient ===== */
+  body.light {
+    --bg-page: linear-gradient(165deg, #EDEFF2 0%, #E4E6EA 45%, #F3DEC8 100%);
+    --bg-surface: #FAFAFB;
+    --bg-surface-2: #E7E9EC;
+    --ink: #232629;
+    --ink-soft: #6E7378;
+    --accent: #E8843D;
+    --accent-soft: rgba(232,132,61,0.14);
+    --accent-on: #2A2520;
+    --rule: rgba(35,38,41,0.1);
+    --tab-inactive: rgba(35,38,41,0.2);
+    --shadow: rgba(60,60,65,0.2);
+    --token-grad: linear-gradient(135deg, #C0C4CA 0%, #E8843D 100%);
+  }
+
+  /* ===== NIGHT — unchanged ===== */
+  body.dark {
+    --bg-page: #0B0E14;
+    --bg-surface: #131720;
+    --bg-surface-2: #181D27;
+    --ink: #DCE4ED;
+    --ink-soft: rgba(220,228,237,0.45);
+    --accent: #1AF0C8;
+    --accent-soft: rgba(26,240,200,0.10);
+    --accent-on: #06110D;
+    --rule: rgba(26,240,200,0.12);
+    --tab-inactive: rgba(220,228,237,0.20);
+    --shadow: rgba(0,0,0,0.55);
+    --token-grad: linear-gradient(135deg, #1AF0C8 0%, #6F6EDB 100%);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  /* Visual stand-in for haptic feedback — real vibration isn't possible from a webpage.
+     Every element with an onclick handler gets a quick, snappy press-down on tap. */
+  [onclick] {
+    transition: transform 0.08s ease-out, opacity 0.08s ease-out;
+  }
+  [onclick]:active {
+    transform: scale(0.95);
+    opacity: 0.85;
+  }
+
+  body {
+    background: #050608;
+    font-family: var(--font-body);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 28px 16px 60px;
+  }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 30px;
+    padding: 10px 18px;
+    margin-bottom: 26px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .toolbar .lbl { color: rgba(255,255,255,0.55); font-size: 12.5px; font-family: var(--font-body); font-weight: 600; }
+  .switch { position: relative; width: 52px; height: 28px; background: #1AF0C8; border-radius: 16px; cursor: pointer; transition: background 0.25s; }
+  .switch.is-light { background: #E8843D; }
+  .switch .knob { position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: left 0.25s cubic-bezier(.4,0,.2,1); box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+  .switch.is-light .knob { left: 26px; }
+  .toolbar .hint { color: rgba(255,255,255,0.3); font-size: 11px; font-family: var(--font-body); }
+
+  .device {
+    width: 360px;
+    height: 760px;
+    border-radius: 52px;
+    background: #0D0B17;
+    padding: 12px;
+    box-shadow: 0 40px 90px -20px var(--shadow);
+    position: relative;
+  }
+
+  .screen-port {
+    width: 100%;
+    height: 100%;
+    border-radius: 42px;
+    overflow: hidden;
+    position: relative;
+    background: var(--bg-page);
+    transition: background 0.35s ease;
+  }
+
+  .bg-orb {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+    filter: blur(40px);
+  }
+  .bg-orb.o1 { width: 220px; height: 220px; top: -60px; right: -50px; background: var(--accent); opacity: 0.16; }
+  .bg-orb.o2 { width: 180px; height: 180px; bottom: 60px; left: -70px; background: var(--accent-2, var(--accent)); opacity: 0.1; }
+  body.dark .bg-orb { opacity: 0.12; }
+
+  .notch {
+    position: absolute;
+    top: 14px; left: 50%;
+    transform: translateX(-50%);
+    width: 90px; height: 22px;
+    border-radius: 16px;
+    background: #0D0B17;
+    z-index: 100;
+  }
+
+  .screen {
+    position: absolute;
+    inset: 0;
+    padding: 50px 18px 0;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(16px);
+    transition: opacity 0.28s ease, transform 0.28s ease;
+    z-index: 1;
+  }
+  .screen.active { opacity: 1; pointer-events: auto; transform: translateX(0); z-index: 2; }
+
+  .status-row {
+    display: flex; justify-content: space-between;
+    font-family: var(--font-rounded); font-size: 11px; font-weight: 600;
+    color: var(--ink-soft); margin-bottom: 16px; flex-shrink: 0;
+  }
+
+  .scroll-area { flex: 1; overflow-y: auto; padding-bottom: 16px; }
+  .scroll-area::-webkit-scrollbar { display: none; }
+
+  .surface-card {
+    background: var(--bg-surface-2);
+    border-radius: 18px;
+    padding: 16px;
+    border: 1px solid var(--rule);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+  }
+  body.light .surface-card { background: rgba(255,255,255,0.55); border-color: rgba(255,255,255,0.6); }
+  body.dark .surface-card { background: rgba(26,240,200,0.07); border-color: rgba(255,255,255,0.08); }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--font-rounded); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent);
+    padding: 5px 11px; border-radius: 20px; background: var(--accent-soft);
+    margin-bottom: 14px; border: 1px solid var(--accent); width: fit-content;
+  }
+  .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: blink 1.5s infinite; }
+  @keyframes blink { 50% { opacity: 0.25; } }
+
+  .screen-title { font-family: var(--font-rounded); font-size: 19px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
+  .screen-sub { font-size: 12px; color: var(--ink-soft); margin-bottom: 16px; }
+
+  .tab-bar {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-around;
+    padding: 14px 0 18px;
+    border-top: 1px solid var(--rule);
+    margin-top: auto;
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+  }
+  body.light .tab-bar { background: rgba(255,255,255,0.45); }
+  body.dark .tab-bar { background: rgba(19,23,32,0.55); }
+  .tab-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; cursor: pointer; padding: 4px 8px; }
+  .tab-icon { width: 22px; height: 22px; border-radius: 7px; background: var(--tab-inactive); transition: background 0.2s; }
+  .tab-btn.active .tab-icon { background: var(--accent); }
+  .tab-label { font-size: 9px; font-family: var(--font-body); color: var(--ink-soft); }
+  .tab-btn.active .tab-label { color: var(--accent); font-weight: 700; }
+
+  .btn-primary {
+    background: var(--accent); color: var(--accent-on); font-family: var(--font-rounded);
+    font-weight: 700; font-size: 14px; text-align: center; padding: 14px; border-radius: 16px;
+    border: none; cursor: pointer; width: 100%; flex-shrink: 0; transition: transform 0.1s;
+  }
+  .btn-primary:active { transform: scale(0.97); }
+
+  .btn-secondary {
+    background: transparent; border: 1.5px solid var(--rule); color: var(--ink);
+    font-family: var(--font-rounded); font-weight: 600; font-size: 13.5px; text-align: center;
+    padding: 13px; border-radius: 16px; cursor: pointer; width: 100%; flex-shrink: 0; transition: transform 0.1s;
+  }
+  .btn-secondary:active { transform: scale(0.97); }
+
+  .input-field {
+    background: var(--bg-surface); border: 1.5px solid var(--rule); border-radius: 14px;
+    padding: 13px 15px; font-family: var(--font-body); font-size: 13.5px; color: var(--ink);
+    margin-bottom: 10px; width: 100%;
+  }
+  .input-field::placeholder { color: var(--ink-soft); }
+
+  .onboard-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 16px; }
+  .onboard-logo { width: 60px; height: 60px; border-radius: 18px; background: var(--accent); display: flex; align-items: center; justify-content: center; }
+  .onboard-title { font-family: var(--font-rounded); font-size: 23px; font-weight: 700; color: var(--ink); }
+  .onboard-sub { font-size: 13px; color: var(--ink-soft); max-width: 230px; line-height: 1.6; }
+
+  .lang-pick {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--bg-surface-2); border-radius: 14px; padding: 13px 16px; margin-bottom: 9px;
+    border: 1.5px solid transparent; cursor: pointer; transition: border-color 0.15s;
+  }
+  .lang-pick.selected { border-color: var(--accent); }
+  .lang-pick .lname { font-family: var(--font-rounded); font-weight: 600; font-size: 14px; color: var(--ink); }
+  .lang-pick .check { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); opacity: 0; transition: opacity 0.15s; }
+  .lang-pick.selected .check { opacity: 1; }
+
+  .home-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
+  .token-chip {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--bg-surface-2); border-radius: 20px; padding: 6px 12px 6px 8px;
+    cursor: pointer; border: 1px solid var(--rule);
+  }
+  .token-coin { width: 18px; height: 18px; border-radius: 50%; background: var(--token-grad); flex-shrink: 0; }
+  .token-count { font-family: var(--font-rounded); font-size: 13px; font-weight: 700; color: var(--ink); }
+
+  .home-greeting { font-family: var(--font-rounded); font-size: 21px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+  .home-date { font-size: 12px; color: var(--ink-soft); margin-bottom: 18px; }
+
+  .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .action-tile {
+    background: var(--accent); border-radius: 18px; padding: 16px 12px; text-align: center;
+    cursor: pointer; border: none; transition: transform 0.1s;
+  }
+  .action-tile:active { transform: scale(0.96); }
+  .action-tile.alt { background: var(--bg-surface-2); }
+  .action-tile .a-icon { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.25); margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; }
+  .action-tile.alt .a-icon { background: var(--accent-soft); }
+  .action-tile .a-text { font-family: var(--font-rounded); font-weight: 700; font-size: 12.5px; color: var(--accent-on); }
+  .action-tile.alt .a-text { color: var(--ink); }
+  .action-tile .a-sub { font-size: 10px; color: var(--accent-on); opacity: 0.7; margin-top: 2px; }
+  .action-tile.alt .a-sub { color: var(--ink-soft); opacity: 1; }
+
+  .stat-row { display: flex; gap: 9px; margin-bottom: 16px; }
+  .stat-box { flex: 1; background: var(--bg-surface-2); border-radius: 14px; padding: 12px; text-align: center; }
+  .stat-box .num { font-family: var(--font-rounded); font-size: 18px; font-weight: 700; color: var(--accent); }
+  .stat-box .lbl { font-size: 9.5px; color: var(--ink-soft); margin-top: 2px; }
+
+  .group-label { font-family: var(--font-rounded); font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); margin: 4px 0 8px; display: flex; justify-content: space-between; }
+  .group-label .sort-hint { font-size: 10px; opacity: 0.8; text-transform: none; letter-spacing: 0; cursor: pointer; }
+
+  .recent-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--rule); cursor: pointer; }
+  .recent-item:last-child { border-bottom: none; }
+  .recent-item .rname { font-family: var(--font-rounded); font-size: 13px; font-weight: 600; color: var(--ink); }
+  .recent-item .rmeta { font-size: 10.5px; color: var(--ink-soft); }
+
+  .source-option {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--bg-surface-2); border-radius: 18px; padding: 18px;
+    margin-bottom: 12px; cursor: pointer; border: 1.5px solid transparent; transition: border-color 0.15s;
+  }
+  .source-option:hover { border-color: var(--accent); }
+  .source-option .so-icon {
+    width: 44px; height: 44px; border-radius: 14px; background: var(--accent-soft);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .source-option .so-title { font-family: var(--font-rounded); font-size: 14px; font-weight: 700; color: var(--ink); }
+  .source-option .so-sub { font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; }
+
+  .dropzone {
+    border: 2px dashed var(--rule); border-radius: 18px; padding: 30px 16px;
+    text-align: center; margin-bottom: 16px;
+  }
+  .dropzone .dz-icon { width: 44px; height: 44px; border-radius: 50%; background: var(--accent-soft); margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; }
+  .dropzone .dz-text { font-family: var(--font-rounded); font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
+  .dropzone .dz-sub { font-size: 11px; color: var(--ink-soft); }
+
+  .file-row {
+    display: flex; align-items: center; gap: 10px; background: var(--bg-surface-2);
+    border-radius: 14px; padding: 12px; margin-bottom: 10px;
+  }
+  .file-row .f-icon { width: 34px; height: 34px; border-radius: 9px; background: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .file-row .f-name { font-family: var(--font-rounded); font-size: 12.5px; font-weight: 700; color: var(--ink); }
+  .file-row .f-meta { font-size: 10.5px; color: var(--ink-soft); }
+
+  .confirm-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px; }
+  .confirm-icon { width: 76px; height: 76px; border-radius: 50%; background: var(--accent-soft); border: 2px solid var(--accent); display: flex; align-items: center; justify-content: center; }
+  .confirm-title { font-family: var(--font-rounded); font-size: 18px; font-weight: 700; color: var(--ink); }
+  .confirm-sub { font-size: 13px; color: var(--ink-soft); max-width: 230px; line-height: 1.6; }
+  .confirm-cost { display: flex; align-items: center; gap: 6px; background: var(--bg-surface-2); border-radius: 20px; padding: 8px 14px; }
+  .confirm-cost .token-coin { width: 16px; height: 16px; }
+
+  .wave-row { display: flex; align-items: center; gap: 2.5px; height: 30px; margin-bottom: 14px; flex-shrink: 0; }
+  .wave-row span { width: 2.5px; border-radius: 2px; background: var(--accent); animation: wv 1.1s ease-in-out infinite; }
+  @keyframes wv { 0%,100%{height:18%;} 50%{height:100%;} }
+
+  .transcript-text { font-size: 13.5px; line-height: 1.7; color: var(--ink); }
+  .transcript-text .dim { color: var(--ink-soft); }
+  .transcript-text .hl { color: var(--accent); font-weight: 700; }
+  body.light .transcript-text .hl { background: var(--accent-soft); padding: 1px 5px; border-radius: 5px; }
+
+  .summary-meta { display: flex; gap: 13px; margin-bottom: 14px; flex-shrink: 0; }
+  .summary-meta .m-item { font-size: 11px; color: var(--ink-soft); }
+  .summary-meta .m-item b { color: var(--ink); font-family: var(--font-rounded); }
+  .summary-pt { display: flex; gap: 9px; align-items: flex-start; margin-bottom: 12px; }
+  .summary-pt .num-circle { width: 17px; height: 17px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-family: var(--font-rounded); font-size: 9.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .summary-pt p { font-size: 12.5px; line-height: 1.6; color: var(--ink); }
+
+  .celebrate-card {
+    background: var(--accent-soft);
+    border: 1.5px solid var(--accent);
+    border-radius: 20px;
+    padding: 20px 18px;
+    text-align: center;
+    margin-top: 14px;
+    flex-shrink: 0;
+  }
+  .celebrate-emoji { font-size: 28px; margin-bottom: 8px; }
+  .celebrate-title { font-family: var(--font-rounded); font-size: 15px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+  .celebrate-sub { font-size: 12px; color: var(--ink-soft); margin-bottom: 14px; line-height: 1.5; }
+
+  .new-words-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-radius: 16px;
+    padding: 13px 14px;
+    margin-bottom: 16px;
+    cursor: pointer;
+  }
+  .new-words-banner .nb-icon {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 16px;
+  }
+  .new-words-banner .nb-text { font-family: var(--font-rounded); font-size: 12.5px; font-weight: 700; color: var(--ink); line-height: 1.4; }
+  .new-words-banner .nb-sub { font-size: 10.5px; color: var(--ink-soft); margin-top: 1px; }
+
+  .word-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--rule); cursor: pointer; }
+  .word-row:last-child { border-bottom: none; }
+  .word-main { font-family: var(--font-rounded); font-size: 14px; font-weight: 700; color: var(--ink); }
+  .word-def { font-size: 11px; color: var(--ink-soft); margin-top: 1px; }
+  .word-date { font-size: 9.5px; color: var(--ink-soft); opacity: 0.7; margin-top: 1px; }
+  .word-badge { font-family: var(--font-rounded); font-size: 9px; font-weight: 700; padding: 4px 9px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.04em; flex-shrink: 0; }
+  .word-badge.new { background: var(--accent-soft); color: var(--accent); }
+  .word-badge.review { background: var(--bg-surface); color: var(--ink-soft); border: 1px solid var(--rule); }
+
+  .flash-card {
+    background: var(--bg-surface-2);
+    border-radius: 20px;
+    padding: 24px 16px;
+    text-align: center;
+    margin-bottom: 14px;
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    border: 1px solid var(--rule);
+  }
+  body.light .flash-card { background: rgba(255,255,255,0.55); border-color: rgba(255,255,255,0.6); }
+  body.dark .flash-card { background: rgba(26,240,200,0.06); border-color: rgba(255,255,255,0.08); }
+  .flash-card .fword { font-family: var(--font-rounded); font-size: 23px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+  .flash-card .fphon { font-size: 11.5px; color: var(--ink-soft); margin-bottom: 14px; }
+
+  .practice-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+    flex-shrink: 0;
+  }
+  .xp-chip {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-family: var(--font-rounded);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .xp-icon { font-size: 12px; }
+
+  .xp-popup {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--accent);
+    color: var(--accent-on);
+    font-family: var(--font-rounded);
+    font-weight: 700;
+    font-size: 13px;
+    padding: 7px 14px;
+    border-radius: 20px;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 10;
+    transform: translateY(6px) scale(0.9);
+    transition: none;
+  }
+  .xp-popup.fire {
+    animation: xpFloat 1.1s ease-out forwards;
+  }
+  @keyframes xpFloat {
+    0% { opacity: 0; transform: translateY(6px) scale(0.85); }
+    20% { opacity: 1; transform: translateY(-4px) scale(1.05); }
+    35% { transform: translateY(-6px) scale(1); }
+    80% { opacity: 1; transform: translateY(-22px) scale(1); }
+    100% { opacity: 0; transform: translateY(-34px) scale(0.95); }
+  }
+  .choice { background: var(--bg-surface); border: 1.5px solid var(--rule); color: var(--ink); font-size: 12px; padding: 11px; border-radius: 13px; margin-bottom: 7px; text-align: center; cursor: pointer; transition: all 0.15s; }
+  .choice:hover { border-color: var(--ink-soft); }
+  .choice.correct-revealed { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+  .choice.wrong-revealed { opacity: 0.4; }
+
+  .token-hero {
+    background: var(--token-grad);
+    border-radius: 22px;
+    padding: 22px 18px;
+    text-align: center;
+    margin-bottom: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .token-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0) 60%);
+    pointer-events: none;
+  }
+  .token-hero .balance-num { font-family: var(--font-rounded); font-size: 32px; font-weight: 700; color: #fff; }
+  .token-hero .balance-lbl { font-size: 11.5px; color: rgba(255,255,255,0.85); margin-top: 2px; }
+
+  .store-item {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--bg-surface-2); border-radius: 16px; padding: 14px 16px; margin-bottom: 10px; cursor: pointer;
+  }
+  .store-item .si-amt { font-family: var(--font-rounded); font-size: 14.5px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 6px; }
+  .store-item .si-price { font-family: var(--font-rounded); font-size: 13px; font-weight: 700; color: var(--accent); background: var(--accent-soft); padding: 6px 12px; border-radius: 12px; }
+
+  .earn-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--rule); }
+  .earn-row:last-child { border-bottom: none; }
+  .earn-row .e-label { font-size: 12.5px; color: var(--ink); }
+  .earn-row .e-amt { font-family: var(--font-rounded); font-size: 12px; font-weight: 700; color: var(--accent); }
+
+  .settings-profile { display: flex; align-items: center; gap: 11px; margin-bottom: 18px; flex-shrink: 0; }
+  .settings-avatar { width: 42px; height: 42px; border-radius: 50%; background: var(--accent); }
+  .settings-name { font-family: var(--font-rounded); font-size: 14.5px; font-weight: 700; color: var(--ink); }
+  .settings-email { font-size: 11px; color: var(--ink-soft); }
+  .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--rule); cursor: pointer; }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-row .s-label { font-size: 13px; color: var(--ink); font-weight: 500; }
+  .settings-row .s-value { font-size: 12px; color: var(--ink-soft); }
+  .settings-row.danger .s-label { color: var(--accent); font-weight: 700; }
+
+  .mini-toggle { width: 36px; height: 21px; border-radius: 12px; background: var(--accent); position: relative; cursor: pointer; flex-shrink: 0; }
+  .mini-toggle .mk { position: absolute; top: 2px; right: 2px; width: 17px; height: 17px; border-radius: 50%; background: #fff; transition: all 0.15s; }
+  .mini-toggle.off { background: var(--rule); }
+  .mini-toggle.off .mk { right: auto; left: 2px; }
+
+  .back-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; cursor: pointer; flex-shrink: 0; }
+  .back-row svg { stroke: var(--ink); }
+  .back-row span { font-family: var(--font-rounded); font-size: 13px; font-weight: 600; color: var(--ink); }
+
+  .footer-note { color: rgba(255,255,255,0.3); font-size: 12px; text-align: center; margin-top: 22px; max-width: 360px; line-height: 1.6; }
+
+  .link-text { color: var(--accent); font-family: var(--font-rounded); font-weight: 700; font-size: 12.5px; text-align: center; cursor: pointer; margin-top: 14px; }
+  .divider-text { display: flex; align-items: center; gap: 10px; color: var(--ink-soft); font-size: 11px; margin: 16px 0; }
+  .divider-text::before, .divider-text::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
+</style>
+</head>
+<body class="dark" id="appBody">
+
+<div class="toolbar">
+  <span class="lbl">☀️ Day</span>
+  <div class="switch" id="themeSwitch" onclick="toggleTheme()"><div class="knob"></div></div>
+  <span class="lbl">🌙 Night</span>
+  <span class="hint">tap anything below — it navigates</span>
+</div>
+
+<div class="device">
+  <div class="notch"></div>
+  <div class="screen-port" id="screenPort">
+    <div class="bg-orb o1"></div>
+    <div class="bg-orb o2"></div>
+
+    <div class="screen active" id="screen-welcome">
+      <div class="status-row"><span>9:41</span><span>VOITRA</span></div>
+      <div class="onboard-center">
+        <div class="onboard-logo">
+          <svg width="30" height="30" viewBox="0 0 64 64" fill="none">
+            <path d="M10 16 C10 16, 18 48, 32 48 C46 48, 54 16, 54 16" stroke="white" stroke-width="6" stroke-linecap="round" fill="none"/>
+          </svg>
+        </div>
+        <div class="onboard-title">Welcome to Voitra</div>
+        <div class="onboard-sub">Translate your lectures live, summarize them after, and learn the words that stuck.</div>
+      </div>
+      <button class="btn-primary" onclick="go('screen-login')">Log in</button>
+      <button class="btn-secondary" style="margin-top:10px;" onclick="go('screen-signup')">Create account</button>
+    </div>
+
+    <div class="screen" id="screen-login">
+      <div class="status-row"><span>9:41</span><span>VOITRA</span></div>
+      <div class="back-row" onclick="go('screen-welcome')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+        <span>Back</span>
+      </div>
+      <div class="screen-title">Log in</div>
+      <div class="screen-sub">Welcome back — pick up where you left off</div>
+      <input class="input-field" type="text" placeholder="Email" disabled>
+      <input class="input-field" type="text" placeholder="Password" disabled>
+      <button class="btn-primary" style="margin-top:6px;" onclick="go('screen-home')">Log in</button>
+      <div class="divider-text">or</div>
+      <button class="btn-secondary">Continue with Apple</button>
+      <div class="link-text" onclick="go('screen-signup')">Don't have an account? Sign up</div>
+    </div>
+
+    <div class="screen" id="screen-signup">
+      <div class="status-row"><span>9:41</span><span>VOITRA</span></div>
+      <div class="back-row" onclick="go('screen-welcome')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+        <span>Back</span>
+      </div>
+      <div class="screen-title">Create your account</div>
+      <div class="screen-sub">Start with 50 free tokens, on us</div>
+      <input class="input-field" type="text" placeholder="Name" disabled>
+      <input class="input-field" type="text" placeholder="Email" disabled>
+      <input class="input-field" type="text" placeholder="Password" disabled>
+      <button class="btn-primary" style="margin-top:6px;" onclick="go('screen-lang')">Create account</button>
+      <div class="link-text" onclick="go('screen-login')">Already have an account? Log in</div>
+    </div>
+
+    <div class="screen" id="screen-lang">
+      <div class="status-row"><span>9:41</span><span>VOITRA</span></div>
+      <div class="screen-title">What language is class in?</div>
+      <div class="screen-sub">We'll translate from this language</div>
+      <div class="scroll-area">
+        <div class="lang-pick selected" onclick="selectLang(this)"><span class="lname">English</span><div class="check"></div></div>
+        <div class="lang-pick" onclick="selectLang(this)"><span class="lname">German</span><div class="check"></div></div>
+        <div class="lang-pick" onclick="selectLang(this)"><span class="lname">Turkish</span><div class="check"></div></div>
+        <div class="lang-pick" onclick="selectLang(this)"><span class="lname">Persian</span><div class="check"></div></div>
+      </div>
+      <button class="btn-primary" onclick="go('screen-home')">Continue</button>
+    </div>
+
+    <div class="screen" id="screen-home">
+      <div class="status-row"><span>9:41</span><span>VOITRA</span></div>
+      <div class="scroll-area">
+        <div class="home-top">
+          <div>
+            <div class="home-greeting">Good morning, Yunes</div>
+            <div class="home-date">Wednesday, June 17</div>
+          </div>
+          <div class="token-chip" onclick="go('screen-tokens')">
+            <div class="token-coin"></div>
+            <span class="token-count">142</span>
+          </div>
+        </div>
+
+        <div class="new-words-banner" onclick="go('screen-vocab')">
+          <div class="nb-icon">✨</div>
+          <div>
+            <div class="nb-text">You learned 5 new words today!</div>
+            <div class="nb-sub">Tap to give them a quick review</div>
+          </div>
+        </div>
+
+        <div class="action-grid">
+          <button class="action-tile" onclick="go('screen-live-confirm')">
+            <div class="a-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="9" y="2" width="6" height="12" rx="3" fill="white"/><path d="M5 11a7 7 0 0014 0M12 18v3" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+            </div>
+            <div class="a-text">Record live</div>
+            <div class="a-sub">In-class translation</div>
+          </button>
+          <button class="action-tile alt" onclick="go('screen-upload')">
+            <div class="a-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg>
+            </div>
+            <div class="a-text">Upload file</div>
+            <div class="a-sub">Recording or notes</div>
+          </button>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-box"><div class="num">12</div><div class="lbl">lectures</div></div>
+          <div class="stat-box"><div class="num">86</div><div class="lbl">words</div></div>
+          <div class="stat-box"><div class="num">5</div><div class="lbl">streak</div></div>
+        </div>
+
+        <div class="group-label">Recent</div>
+        <div class="recent-item" onclick="go('screen-summary')"><div><div class="rname">Microeconomics 101</div><div class="rmeta">Yesterday · 42 min</div></div></div>
+        <div class="recent-item" onclick="go('screen-summary')"><div><div class="rname">Statistics II</div><div class="rmeta">Monday · 38 min</div></div></div>
+      </div>
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab(this,'screen-home')"><div class="tab-icon"></div><span class="tab-label">Home</span></button>
+        <button class="tab-btn" onclick="switchTab(this,'screen-live-confirm')"><div class="tab-icon"></div><span class="tab-label">Live</span></button>
+        <button class="tab-btn" onclick="switchTab(this,'screen-vocab')"><div class="tab-icon"></div><span class="tab-label">Words</span></button>
+        <button class="tab-btn" onclick="switchTab(this,'screen-summary-hub')"><div class="tab-icon"></div><span class="tab-label">Summary</span></button>
+        <button class="tab-btn" onclick="switchTab(this,'screen-settings')"><div class="tab-icon"></div><span class="tab-label">Settings</span></button>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-upload">
+      <div class="status-row"><span>9:41</span><span>VOITRA</span></div>
+      <div class="back-row" onclick="go('screen-home')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+        <span>Home</span>
+      </div>
+      <div class="screen-title">Add a lecture</div>
+      <div class="screen-sub">Record now, or upload something you already have</div>
+      <div class="scroll-area">
+        <div class="source-option" onclick="go('screen-live-confirm')">
+          <div class="so-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="9" y="2" width="6" height="12" rx="3" fill="var(--accent)"/><path d="M5 11a7 7 0 0014 0M12 18v3" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <div><div class="so-title">Record live</div><div class="so-sub">Translate as the lecture happens</div></div>
+        </div>
+        <div class="source-option" onclick="go('screen-upload-file')">
+          <div class="so-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg></div>
+          <div><div class="so-title">Upload a recording</div><div class="so-sub">Audio or video file from your library</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-upload-file">
+      <div class="status-row"><span>9:41</span><span>VOITRA</span></div>
+      <div class="back-row" onclick="go('screen-upload')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+        <span>Back</span>
+      </div>
+      <div class="screen-title">Upload a recording</div>
+      <div class="screen-sub">MP3, MP4, M4A, or WAV — up to 3 hours</div>
+      <div class="scroll-area">
+        <div class="dropzone">
+          <div class="dz-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg></div>
+          <div class="dz-text">Tap to choose a file</div>
+          <div class="dz-sub">or drag and drop</div>
+        </div>
+        <div class="file-row">
+          <div class="f-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+          <div><div class="f-name">Stats_Lecture_03.m4a</div><div class="f-meta">38 MB · ready to process</div></div>
+        </div>
+      </div>
+      <div class="confirm-cost" style="margin-bottom:10px; width:100%; justify-content:center;">
+        <div class="token-coin"></div><span style="font-family:var(--font-rounded); font-size:12.5px; font-weight:700; color:var(--ink);">Costs ~12 tokens · ~40 min audio</span>
+      </div>
+      <button class="btn-primary" onclick="go('screen-summary')">Process file</button>
+    </div>
+
+    <div class="screen" id="screen-live-confirm">
+      <div class="status-row"><span>9:41</span><span>VOITRA</span></div>
+      <div class="back-row" onclick="go('screen-home')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+        <span>Home</span>
+      </div>
+      <div class="confirm-center">
+        <div class="confirm-icon">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><rect x="9" y="2" width="6" height="12" rx="3" fill="var(--accent)"/><path d="M5 11a7 7 0 0014 0M12 18v3" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <div class="confirm-title">Ready to start?</div>
+        <div class="confirm-sub">Voitra will listen and translate live until you end the session.</div>
+      </div>
+      <button class="btn-primary" onclick="go('screen-live')">Start recording</button>
+    </div>
+
+    <div class="screen" id="screen-live">
+      <div class="status-row"><span>9:41</span><span>VOITRA</span></div>
+      <div class="scroll-area">
+        <div class="pill"><span class="dot"></span>Recording live</div>
+        <div class="screen-title">Microeconomics 101</div>
+        <div class="screen-sub">EN → EN · Prof. Halden</div>
+        <div class="wave-row">
+          <span style="height:40%; animation-delay:0s;"></span><span style="height:70%; animation-delay:.1s;"></span><span style="height:30%; animation-delay:.2s;"></span><span style="height:90%; animation-delay:.3s;"></span><span style="height:50%; animation-delay:.4s;"></span><span style="height:80%; animation-delay:.5s;"></span><span style="height:35%; animation-delay:.6s;"></span><span style="height:65%; animation-delay:.7s;"></span><span style="height:45%; animation-delay:.8s;"></span>
+        </div>
+        <div class="surface-card">
+          <p class="transcript-text"><span class="dim">...and as a result, the demand curve</span><br><br>shifts to the right, indicating an <span class="hl">increase</span> in quantity demanded at every price point.</p>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="go('screen-summary')">End lecture & summarize</button>
+    </div>
+
+    <div class="screen" id="screen-summary">
+      <div class="status-row"><span>9:41</span><span>VOITRA</span></div>
+      <div class="back-row" onclick="go('screen-home')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+        <span>Home</span>
+      </div>
+      <div class="screen-title">Lecture summary</div>
+      <div class="summary-meta">
+        <div class="m-item"><b>42</b> min</div>
+        <div class="m-item"><b>8</b> key points</div>
+        <div class="m-item"><b>6</b> new words</div>
+      </div>
+      <div class="scroll-area">
+        <div class="surface-card">
+          <div class="summary-pt"><div class="num-circle">1</div><p>Demand moves opposite to price — the basic logic behind the demand curve.</p></div>
+          <div class="summary-pt"><div class="num-circle">2</div><p>The curve shifts when income or consumer preference changes, not price alone.</p></div>
+          <div class="summary-pt"><div class="num-circle">3</div><p>Elasticity measures how sharply demand reacts to a price change.</p></div>
+          <div class="summary-pt"><div class="num-circle">4</div><p>Equilibrium is where supply and demand curves cross.</p></div>
+        </div>
+      </div>
+      <div class="celebrate-card">
+        <div class="celebrate-emoji">🎉</div>
+        <div class="celebrate-title">Nice work — 6 new words today!</div>
+        <div class="celebrate-sub">Want to lock them in now, or save it for later?</div>
+        <button class="btn-primary" onclick="go('screen-vocab')">Review now</button>
+        <button class="btn-secondary" style="margin-top:8px;" onclick="go('screen-home')">Maybe later</button>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-vocab">
+      <div class="status-row"><span>9:41</span><span>VOITRA</span></div>
+      <div class="screen-title">Your words</div>
+      <div class="group-label">Sorted by date modified <span class="sort-hint" onclick="toggleSort()" id="sortHint">↓ newest</span></div>
+      <div class="scroll-area">
+        <div class="surface-card">
+          <div class="word-row" onclick="go('screen-flash')">
+            <div><div class="word-main">Elasticity</div><div class="word-def">price → demand response</div><div class="word-date">Modified today</div></div>
+            <span class="word-badge new">new</span>
+          </div>
+          <div class="word-row" onclick="go('screen-flash')">
+            <div><div class="word-main">Surplus</div><div class="word-def">excess supply</div><div class="word-date">Modified today</div></div>
+            <span class="word-badge new">new</span>
+          </div>
+          <div class="word-row" onclick="go('screen-flash')">
+            <div><div class="word-main">Equilibrium</div><div class="word-def">supply meets demand</div><div class="word-date">Modified yesterday</div></div>
+            <span class="word-badge review">review</span>
+          </div>
+          <div class="word-row" onclick="go('screen-flash')">
+            <div><div class="word-main">Variance</div><div class="word-def">spread of a distribution</div><div class="word-date">Modified Monday</div></div>
+            <span class="word-badge review">review</span>
+          </div>
+          <div class="word-row" onclick="go('screen-flash')">
+            <div><div class="word-main">Skewness</div><div class="word-def">asymmetry of a distribution</div><div class="word-date">Modified Monday</div></div>
+            <span class="word-badge review">review</span>
+          </div>
+        </div>
+      </div>
+      <div class="tab-bar">
+        <button class="tab-btn" onclick="switchTab(this,'screen-home')"><div class="tab-icon"></div><span class="tab-label">Home</span></button>
+        <button class="tab-btn" onclick="switchTab(this,'screen-live-confirm')"><div class="tab-icon"></div><span class="tab-label">Live</span></button>
+        <button class="tab-btn active" onclick="switchTab(this,'screen-vocab')"><div class="tab-icon"></div><span class="tab-label">Words</span></button>
+        <button class="tab-btn" onclick="switchTab(this,'screen-summary-hub')"><div class="tab-icon"></div><span class="tab-label">Summary</span></button>
+        <button class="tab-btn" onclick="switchTab(this,'screen-settings')"><div class="tab-icon"></div><span class="tab-label">Settings</span></button>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-flash">
+      <div class="status-row"><span>9:41</span><span>VOITRA</span></div>
+      <div class="back-row" onclick="go('screen-vocab')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+        <span>Words</span>
+      </div>
+      <div class="practice-top">
+        <div>
+          <div class="screen-title">Practice</div>
+          <div class="screen-sub" id="cardCounter" style="margin-bottom:0;">Card 2 of 6</div>
+        </div>
+        <div class="xp-chip"><span class="xp-icon">⚡</span><span id="xpCount">120</span> XP</div>
+      </div>
+      <div class="scroll-area" style="position:relative;">
+        <div class="xp-popup" id="xpPopup">+10 XP</div>
+        <div class="flash-card">
+          <div class="fword">Elasticity</div>
+          <div class="fphon">/ɪˌlæˈstɪsɪti/</div>
+          <div class="choice" onclick="revealAnswer(this, true)">Responsiveness to price change</div>
+          <div class="choice" onclick="revealAnswer(this, false)">Physical flexibility</div>
+          <div class="choice" onclick="revealAnswer(this, false)">A type of market failure</div>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="nextCard()">Next card</button>
+    </div>
+
+    <div class="screen" id="screen-tokens">
+      <div class="status-row"><span>9:41</span><span>VOITRA</span></div>
+      <div class="back-row" onclick="go('screen-settings')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+        <span>Settings</span>
+      </div>
+      <div class="scroll-area">
+        <div class="screen-title">Tokens</div>
+        <div class="screen-sub">Power live translation and uploads</div>
+        <div class="token-hero">
+          <div class="balance-num">142</div>
+          <div class="balance-lbl">tokens available</div>
+        </div>
+
+        <div class="group-label">Buy more</div>
+        <div class="store-item"><div class="si-amt"><div class="token-coin"></div>100 tokens</div><div class="si-price">€2.99</div></div>
+        <div class="store-item"><div class="si-amt"><div class="token-coin"></div>500 tokens</div><div class="si-price">€9.99</div></div>
+        <div class="store-item"><div class="si-amt"><div class="token-coin"></div>1500 tokens</div><div class="si-price">€19.99</div></div>
+
+        <div class="group-label" style="margin-top:16px;">Earn for free</div>
+        <div class="surface-card">
+          <div class="earn-row"><span class="e-label">Daily login streak</span><span class="e-amt">+5</span></div>
+          <div class="earn-row"><span class="e-label">Finish a flashcard set</span><span class="e-amt">+10</span></div>
+          <div class="earn-row"><span class="e-label">Invite a friend</span><span class="e-amt">+50</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-settings">
+      <div class="status-row"><span>9:41</span><span>VOITRA</span></div>
+      <div class="scroll-area">
+        <div class="settings-profile">
+          <div class="settings-avatar"></div>
+          <div><div class="settings-name">Yunes Nasr</div><div class="settings-email">yunes@voitra.app</div></div>
+        </div>
+
+        <div class="group-label">Appearance</div>
+        <div class="settings-row"><span class="s-label">Match system / time of day</span><div class="mini-toggle" id="autoToggle" onclick="toggleAuto(this)"><div class="mk"></div></div></div>
+        <div class="settings-row"><span class="s-label">Theme</span><span class="s-value" id="themeValue">Automatic</span></div>
+
+        <div class="group-label">Languages</div>
+        <div class="settings-row"><span class="s-label">Lecture language</span><span class="s-value">English</span></div>
+        <div class="settings-row"><span class="s-label">My language</span><span class="s-value">Persian</span></div>
+
+        <div class="group-label">Notifications</div>
+        <div class="settings-row"><span class="s-label">Daily word review</span><div class="mini-toggle"><div class="mk"></div></div></div>
+
+        <div class="group-label">Account</div>
+        <div class="settings-row" onclick="go('screen-tokens')"><span class="s-label">Manage tokens</span><span class="s-value">142 left</span></div>
+        <div class="settings-row danger" onclick="go('screen-welcome')"><span class="s-label">Log out</span></div>
+      </div>
+      <div class="tab-bar">
+        <button class="tab-btn" onclick="switchTab(this,'screen-home')"><div class="tab-icon"></div><span class="tab-label">Home</span></button>
+        <button class="tab-btn" onclick="switchTab(this,'screen-live-confirm')"><div class="tab-icon"></div><span class="tab-label">Live</span></button>
+        <button class="tab-btn" onclick="switchTab(this,'screen-vocab')"><div class="tab-icon"></div><span class="tab-label">Words</span></button>
+        <button class="tab-btn" onclick="switchTab(this,'screen-summary-hub')"><div class="tab-icon"></div><span class="tab-label">Summary</span></button>
+        <button class="tab-btn active" onclick="switchTab(this,'screen-settings')"><div class="tab-icon"></div><span class="tab-label">Settings</span></button>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-summary-hub">
+      <div class="status-row"><span>9:41</span><span>VOITRA</span></div>
+      <div class="screen-title">Summarize anything</div>
+      <div class="screen-sub">Drop in a file and get the key points back</div>
+      <div class="scroll-area">
+        <div class="dropzone">
+          <div class="dz-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg></div>
+          <div class="dz-text">Tap to choose a file</div>
+          <div class="dz-sub">Audio, video, or text notes</div>
+        </div>
+
+        <div class="group-label">Past summaries</div>
+        <div class="surface-card">
+          <div class="recent-item" onclick="go('screen-summary')"><div><div class="rname">Microeconomics 101</div><div class="rmeta">Yesterday · 42 min</div></div></div>
+          <div class="recent-item" onclick="go('screen-summary')"><div><div class="rname">Statistics II</div><div class="rmeta">Monday · 38 min</div></div></div>
+          <div class="recent-item" onclick="go('screen-summary')"><div><div class="rname">Reading notes — Ch. 4</div><div class="rmeta">Last week · text file</div></div></div>
+        </div>
+      </div>
+      <div class="tab-bar">
+        <button class="tab-btn" onclick="switchTab(this,'screen-home')"><div class="tab-icon"></div><span class="tab-label">Home</span></button>
+        <button class="tab-btn" onclick="switchTab(this,'screen-live-confirm')"><div class="tab-icon"></div><span class="tab-label">Live</span></button>
+        <button class="tab-btn" onclick="switchTab(this,'screen-vocab')"><div class="tab-icon"></div><span class="tab-label">Words</span></button>
+        <button class="tab-btn active" onclick="switchTab(this,'screen-summary-hub')"><div class="tab-icon"></div><span class="tab-label">Summary</span></button>
+        <button class="tab-btn" onclick="switchTab(this,'screen-settings')"><div class="tab-icon"></div><span class="tab-label">Settings</span></button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<p class="footer-note">v2 — login/signup, upload-vs-live choice, vocabulary sorted by date, log out. Tokens moved into Settings; a new Summary tab lets you drop in any file to get it summarized. Day mode is a silver-to-orange gradient; Night mode is unchanged.</p>
+
+<script>
+  function go(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('onclick')?.includes(`'${id}'`));
+    });
+  }
+
+  function switchTab(btn, id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function toggleTheme() {
+    const body = document.getElementById('appBody');
+    const sw = document.getElementById('themeSwitch');
+    if (body.classList.contains('dark')) {
+      body.classList.replace('dark', 'light');
+      sw.classList.add('is-light');
+    } else {
+      body.classList.replace('light', 'dark');
+      sw.classList.remove('is-light');
+    }
+  }
+
+  function selectLang(el) {
+    el.parentElement.querySelectorAll('.lang-pick').forEach(p => p.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  let xpTotal = 120;
+  function revealAnswer(el, isCorrect) {
+    const choices = el.parentElement.querySelectorAll('.choice');
+    choices.forEach(c => {
+      c.style.pointerEvents = 'none';
+      if (c === el) c.classList.add(isCorrect ? 'correct-revealed' : 'wrong-revealed');
+      else c.classList.add('wrong-revealed');
+    });
+    awardXP(isCorrect ? 10 : 2);
+  }
+
+  function awardXP(amount) {
+    xpTotal += amount;
+    document.getElementById('xpCount').textContent = xpTotal;
+    const popup = document.getElementById('xpPopup');
+    popup.textContent = `+${amount} XP`;
+    popup.classList.remove('fire');
+    // restart animation reliably
+    void popup.offsetWidth;
+    popup.classList.add('fire');
+  }
+
+  let cardNum = 2;
+  function nextCard() {
+    cardNum = cardNum < 6 ? cardNum + 1 : 1;
+    document.getElementById('cardCounter').textContent = `Card ${cardNum} of 6`;
+    document.querySelectorAll('#screen-flash .choice').forEach(c => {
+      c.classList.remove('correct-revealed', 'wrong-revealed');
+      c.style.pointerEvents = 'auto';
+    });
+  }
+
+  function toggleAuto(el) {
+    el.classList.toggle('off');
+    document.getElementById('themeValue').textContent = el.classList.contains('off') ? 'Manual' : 'Automatic';
+  }
+
+  let sortDesc = true;
+  function toggleSort() {
+    sortDesc = !sortDesc;
+    document.getElementById('sortHint').textContent = sortDesc ? '↓ newest' : '↑ oldest';
+    const card = document.querySelector('#screen-vocab .surface-card');
+    const rows = Array.from(card.querySelectorAll('.word-row'));
+    rows.reverse().forEach(r => card.appendChild(r));
+  }
+</script>
+
+</body>
+</html>
